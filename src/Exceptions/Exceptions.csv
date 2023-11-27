@@ -1,0 +1,22 @@
+Error Code - lf2;Error Text;Location
+lf2101;Get by $conditions does not have a correct attribute. Attribute does not exist;DBMapper
+lf2102;Attribute map doesnt exist.;DBMapper
+lf2103;Database communication error.;DBErrors
+lf2104;Unknown database.;DBErrors
+lf2105;Method storeMultiple not implemented for composite primary keys;DBStorage
+lf2106;The model you would like to patch is missing the primary key.;DBStorage
+lf2107;The model you would like to patch is missing the primary key, or the key is empty.;Repository
+lf2108;Request header is not correct. Please, report this error.;HeaderPArser
+lf2109;Unsupported language was requested.;Language
+lf2110;Pagination parameter orderBy is not correct. Such parameter does not exist.;
+lf2111;Requested attribute $'. $name . ' does not exist in the class:;TableSearcher
+lf2112;Internal error in input parser. Please report this error.;InputModel
+lf2113;Requested attribute $'. $attr . ' does not exist in the class:;Language
+lf2114;Requested attribute $'. $name . ' does not exist in the class: ;Model
+lf2115;Requested attribute does not exist in Model.;Model
+lf2116;Requested attribute $'. $name . ' does not exist in the class: ;Paginator
+lf2117;Requested attribute $'. $name . ' does not exist in InputModel: ;InputModel
+lf2118;Search parameters are not correct.;SearcherInput
+lf2119;;
+lf2120;;
+
