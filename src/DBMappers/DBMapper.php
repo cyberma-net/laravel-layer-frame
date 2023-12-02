@@ -2,7 +2,7 @@
 /**
 
  *
- 
+
  * Date: 21.02.2021
  */
 
@@ -13,7 +13,6 @@ use Cyberma\LayerFrame\Contracts\ModelMaps\IModelMap;
 use Cyberma\LayerFrame\Contracts\Models\IModel;
 use Cyberma\LayerFrame\Contracts\Models\IModelFactory;
 use Cyberma\LayerFrame\Exceptions\CodeException;
-use Cyberma\LayerFrame\Exceptions\Exception;
 use Illuminate\Support\Collection;
 
 

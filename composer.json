@@ -1,6 +1,6 @@
 {
   "name": "cyberma/laravel-layer-frame",
-  "version" : "1.0.2",
+  "version" : "1.0.3",
   "description": "Layer Frame for Laravel",
   "keywords": ["Data Mapper", "Laravel", "Layer frame"],
   "license": "MIT",
@@ -22,7 +22,7 @@
     },
 	"autoload": {
 		"psr-4": {
-				"cyberma\\layer-frame\\": "src/"
+				"Cyberma\\LayerFrame\\": "src/"
 		}
 	},
 	"minimum-stability": "dev",

@@ -2,7 +2,7 @@
 /**
 
  *
- 
+
  * Date: 07.02.2021
  */
 
@@ -14,7 +14,6 @@ use Cyberma\LayerFrame\Contracts\DBMappers\IDBMapper;
 use Cyberma\LayerFrame\Contracts\DBStorage\IDBStorage;
 use Cyberma\LayerFrame\Contracts\Errors\IErrorBag;
 use Cyberma\LayerFrame\Contracts\ModelMaps\IModelMap;
-use Cyberma\LayerFrame\Contracts\Models\IModelFactory;
 use Cyberma\LayerFrame\Contracts\Pagination\IPaginator;
 use Cyberma\LayerFrame\Contracts\Pagination\ITableSearcher;
 use Cyberma\LayerFrame\Contracts\Repositories\IRepository;
@@ -35,7 +34,6 @@ use Illuminate\Support\ServiceProvider;
 
 class LayerFrameServiceProvider extends ServiceProvider
 {
-
     public function register()
     {
         $this->registerGeneralObjects();
@@ -62,7 +60,6 @@ class LayerFrameServiceProvider extends ServiceProvider
         $this->app->singleton(IApiMapper::class, function () {
             return new ApiMapper();
         });
-
     }
 
 

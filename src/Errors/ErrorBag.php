@@ -1,7 +1,7 @@
 <?php
 /**
 
- 
+
  * Date: 5.2.2018
  * Time: 22:50
  */
@@ -12,7 +12,6 @@ use Cyberma\LayerFrame\Contracts\Errors\IErrorBag;
 
 class ErrorBag implements IErrorBag
 {
-
     private string $errorCode = '0001';
     private array $errors = [];
     private string $message = '';
@@ -74,7 +73,6 @@ class ErrorBag implements IErrorBag
     {
         $this->errors = $errors;
     }
-
 
     /**
      * @return string
