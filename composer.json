@@ -1,6 +1,6 @@
 {
   "name": "cyberma/laravel-layer-frame",
-  "version" : "1.0.3",
+  "version" : "1.0.4",
   "description": "Layer Frame for Laravel",
   "keywords": ["Data Mapper", "Laravel", "Layer frame"],
   "license": "MIT",
@@ -12,13 +12,13 @@
         }
 	],
     "require": {
-        "php": ">=8.0",
+        "php": ">=8.2",
 		"laravel/framework": "10.*",
         "ext-openssl": "*"
     },
 	"require-dev": {
-		"mockery/mockery": "^1.4.2",
-		"phpunit/phpunit": "^9.5.4"
+		"mockery/mockery": "^1.6.7",
+		"phpunit/phpunit": "^11.0.3"
     },
 	"autoload": {
 		"psr-4": {
