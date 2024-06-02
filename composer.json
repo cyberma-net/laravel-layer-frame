@@ -13,7 +13,7 @@
 	],
     "require": {
         "php": ">=8.2",
-		"laravel/framework": ">10.*",
+		"laravel/framework": ">=10.0",
         "ext-openssl": "*"
     },
 	"require-dev": {
