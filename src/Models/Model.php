@@ -325,9 +325,11 @@ class Model implements IModel
     {
         if(empty($attributes)) {
             $this->originalAttributes = [];
+
+            return;
         }
 
-        foreach($this->attributes as $attr) {
+        foreach($attributes as $attr) {
             unset($this->originalAttributes[$attr]);
         }
     }
