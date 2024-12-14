@@ -2,7 +2,7 @@
 /**
 
  *
- 
+
  * Date: 21.02.2021
  */
 
@@ -15,7 +15,6 @@ use Illuminate\Support\Collection;
 
 class ModelMap implements IModelMap
 {
-
     const TABLE = '';
 
     const PRIMARY_KEY = ['id']; //parameter names, not column names; in most cases ['id']
@@ -43,7 +42,6 @@ class ModelMap implements IModelMap
     const COLUMN_ALIAS_MAP = [    // [ 'id' => 'users.id as id' ]   -use this for connected tables, where names might colide; column name as the array key!
         // 'id' => 'users.id as id'
     ];
-
 
     /**
      * @param IModel $model

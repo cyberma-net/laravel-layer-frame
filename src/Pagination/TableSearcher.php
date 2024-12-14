@@ -1,7 +1,7 @@
 <?php
 /**
 
- 
+
  * Date: 14.6.2018
  * Time: 15:48
  */
@@ -48,7 +48,6 @@ class TableSearcher implements ITableSearcher
 
     public function __construct(IInputParser $inputParser, SearcherInput $searcherInput)
     {
-
         $this->inputParser = $inputParser;
         $this->searcherInput = $searcherInput;
     }
@@ -67,7 +66,6 @@ class TableSearcher implements ITableSearcher
      */
     public function setSearcher (string|null $searchAt, string $searchFor, string $operator = 'eq')
     {
-
         // 2. parse the data sent by the api
         //    and put it to the registrationInput inputFields
         $this->searcherInput = $this->inputParser->parse($this->searcherInput , [
@@ -88,7 +86,6 @@ class TableSearcher implements ITableSearcher
      */
     public function getConditions () : array
     {
-
         if(array_key_exists($this->operator, static::ALLOWED_SEARCH_OPERATORS)) {
             $operator = static::ALLOWED_SEARCH_OPERATORS[$this->operator];
         }
@@ -111,9 +108,7 @@ class TableSearcher implements ITableSearcher
      */
     public function __get(string $name)
     {
-
         switch ($name) {
-
             case  'searchAt' :
                 return $this->searchAt;
 

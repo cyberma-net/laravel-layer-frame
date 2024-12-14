@@ -6,13 +6,6 @@ use Cyberma\LayerFrame\Contracts\Models\IModel;
 use Cyberma\LayerFrame\Exceptions\CodeException;
 
 
-/**
-
- *
- 
- * Date: 21.02.2021
- */
-
 class Model implements IModel
 {
 
@@ -163,7 +156,6 @@ class Model implements IModel
      */
     public function resetAttributeToOriginal(string $name)
     {
-
         if (isset($this->originalAttributes[$name])) {
             if(array_key_exists($name, $this->attributes)) {
                 $this->attributes[$name] = $this->originalAttributes[$name];
@@ -312,7 +304,7 @@ class Model implements IModel
      * @param array $except
      * @return array
      */
-    public function getChangedAttributes (array $selectedAttributes = [], array $except = []): array
+    public function getChangedAttributes(array $selectedAttributes = [], array $except = []): array
     {
 
         $allAttributes = $this->toArray($selectedAttributes, $except);
@@ -323,5 +315,20 @@ class Model implements IModel
         }
 
         return $output;
+    }
+
+    /**
+     * @param string[] $attributes, [] means all of them
+     * @return void
+     */
+    public function resetDirtyAttributes(array $attributes = [])
+    {
+        if(empty($attributes)) {
+            $this->originalAttributes = [];
+        }
+
+        foreach($this->attributes as $attr) {
+            unset($this->originalAttributes[$attr]);
+        }
     }
 }

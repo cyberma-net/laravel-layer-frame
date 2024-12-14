@@ -17,6 +17,7 @@ Especially bigger projects can benefit from better testability and separation of
 * Single responsibility principle
 * Layered data flow
 * Types wherever possible
+* Settings over repeated code
 
 ## Layers
 

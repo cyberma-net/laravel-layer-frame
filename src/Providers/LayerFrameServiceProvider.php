@@ -44,7 +44,6 @@ class LayerFrameServiceProvider extends ServiceProvider
 
     private function registerGeneralObjects()
     {
-
         $this->app->singleton(ExceptionHandler::class, function () {
             return new ExceptionHandler();
         });

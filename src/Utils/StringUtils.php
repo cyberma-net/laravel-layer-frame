@@ -1,10 +1,9 @@
 <?php
 
-namespace Cyberma\LayerFrame\Supporting;
+namespace Cyberma\LayerFrame\Utils;
 
-class StringOperations
+class StringUtils
 {
-
     /**
      * @param string $string
      * @param string $identifier
@@ -13,7 +12,6 @@ class StringOperations
      */
     public static function encryptString (string $string) : string
     {
-
         return base64_encode(openssl_encrypt('#' . $string,
             'AES-128-CFB',
             sha1(config('layerFrame.encryptIdentifier', '#LayerFrame'), true), 0,
@@ -40,7 +38,6 @@ class StringOperations
      */
     public static function decryptString (string $string)
     {
-
         $decoded =  openssl_decrypt(base64_decode($string),
             'AES-128-CFB',
             sha1(config('layerFrame.encryptIdentifier', '#LayerFrame'), true), 0,
@@ -123,11 +120,10 @@ class StringOperations
      */
     public static function remove_accents($string)
     {
-
         if ( !preg_match('/[\x80-\xff]/', $string) )
             return $string;
 
-        if (StringOperations::seems_utf8($string)) {
+        if (StringUtils::seems_utf8($string)) {
             $chars = array(
                 // Decompositions for Latin-1 Supplement
                 chr(195).chr(128) => 'A', chr(195).chr(129) => 'A',
@@ -229,7 +225,8 @@ class StringOperations
                 chr(194).chr(163) => '');
 
             $string = strtr($string, $chars);
-        } else {
+        }
+        else {
             // Assume ISO-8859-1 if not UTF-8
             $chars['in'] = chr(128).chr(131).chr(138).chr(142).chr(154).chr(158)
                 .chr(159).chr(162).chr(165).chr(181).chr(192).chr(193).chr(194)

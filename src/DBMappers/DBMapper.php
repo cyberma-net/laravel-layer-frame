@@ -35,7 +35,6 @@ class DBMapper implements IDBMapper
      */
     public function __construct(IModelMap $modelMap, IModelFactory $modelFactory)
     {
-
         $this->modelMap = $modelMap;
         $this->modelFactory = $modelFactory;
     }

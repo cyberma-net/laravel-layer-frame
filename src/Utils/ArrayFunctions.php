@@ -2,16 +2,15 @@
 /**
 
  *
- 
+
  * Date: 19.01.2021
  */
 
-namespace Cyberma\LayerFrame\Supporting;
+namespace Cyberma\LayerFrame\Utils;
 
 
 class ArrayFunctions
 {
-
     /**
      * @param array $array
      * @param array $removeThis

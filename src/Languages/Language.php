@@ -60,7 +60,6 @@ class Language
 
     public function setEnvLang (string $lang)
     {
-
         $this->envLang = in_array($lang, $this->supportedLanguages )
             ? $lang
             : 'en_US';
@@ -85,7 +84,6 @@ class Language
      */
     public function setDataStreamLanguage(string $dataStreamLanguage, $fallbackLanguage = null) : void
     {
-
         if(!in_array($dataStreamLanguage, $this->supportedLanguages )) {
             $this->dataLang = 'en_US';
             throw new Exception(_('Unsupported language was requested.'), 'lf2109', [], 400);
@@ -116,7 +114,7 @@ class Language
 
     /**
      * @param string|array $attribute
-     * @return null|string
+     * @return null|string|array
      */
     public function extractLSAttribute($attribute)
     {

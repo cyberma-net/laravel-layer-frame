@@ -52,7 +52,17 @@ interface IModel
      */
     public function getAllNotNullAttributes(): array;
 
+    /**
+     * @return mixed
+     */
     public function makeAllAttributesDirty();
+
+
+    /**
+     * @param string[] $attributes - [] means all
+     * @return mixed
+     */
+    public function resetDirtyAttributes(array $attributes = []);
 
     /**
      * @param string|array $attribute

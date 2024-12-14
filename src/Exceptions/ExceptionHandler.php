@@ -1,7 +1,7 @@
 <?php
 /**
  * Created by PhpStorm.
- 
+
  * Date: 18.1.2018
  * Time: 16:09
  */
@@ -25,7 +25,6 @@ class ExceptionHandler
      */
     private function prepareResponse (Exception $e, $format)
     {
-
         $response = [
             'error' => true,
             'message' =>  ($e instanceof CodeException) ? 'Internal error: ' . $e->getMessage() : $e->getMessage() ,

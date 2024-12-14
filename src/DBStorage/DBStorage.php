@@ -54,7 +54,6 @@ class DBStorage implements IDBStorage
         return $query;
     }
 
-
     /**
      * @param array $columnsNames
      * @param array $conditions
@@ -71,7 +70,6 @@ class DBStorage implements IDBStorage
                                     array $pagination = [/*'page' => 1, 'perPage' => 20*/],
                                     array $orderBy = [/*'column' => 'id', 'order' => 'desc'*/]): Collection
     {
-
         $query = $this->queryByConditions($conditions, $columnsNames);
         $query = $this->addPagination($query, $pagination);
         $query = $this->addOrderBy($query, $orderBy);

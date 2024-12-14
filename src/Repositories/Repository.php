@@ -1,10 +1,4 @@
 <?php
-/**
-
- *
- 
- * Date: 21.02.2022
- */
 
 namespace Cyberma\LayerFrame\Repositories;
 
@@ -158,6 +152,9 @@ class Repository implements IRepository
         foreach($this->modelMap->getPrimaryKey() as $key) {
             $model->{$key} = $columns[$this->dbMapper->mapAttributeNameToColumn($key)];
         }
+
+        $model->resetDirtyAttributes();
+
         return $model;
     }
 
@@ -183,7 +180,7 @@ class Repository implements IRepository
 
     /**
      * @param IModel $model
-     * @param array $selectedAttributes
+     * @param string[] $selectedAttributes
      * @return int -number of affected rows
      * @throws \Cyberma\LayerFrame\Exceptions\CodeException
      * @throws \Cyberma\LayerFrame\Exceptions\Exception
@@ -207,6 +204,8 @@ class Repository implements IRepository
 
         $columns = $this->dbMapper->map($model, $selectedAttributes);
 
+        $model->resetDirtyAttributes($selectedAttributes);
+
         return $this->dbStorage->patchById($columns);
     }
 
@@ -222,6 +221,8 @@ class Repository implements IRepository
     {
         $columns = $this->dbMapper->map($model, $selectedAttributes);
         $conditions = $this->dbMapper->mapConditionsColumnNames($conditions);
+
+        $model->resetDirtyAttributes($selectedAttributes);
 
         return $this->dbStorage->update($columns, $conditions);
     }

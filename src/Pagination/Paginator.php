@@ -1,7 +1,7 @@
 <?php
 /**
 
- 
+
  * Date: 14.6.2018
  * Time: 15:48
  */
@@ -43,7 +43,6 @@ class Paginator implements IPaginator
      */
     public function setPaginator (int $page = 1, int $perPage = 30, string $orderBy = 'createdAt', string $order = 'asc')
     {
-
         // 2. parse the data sent by the api
         //    and put it to the registrationInput inputFields
         $this->paginatorInput = $this->inputParser->parse($this->paginatorInput, [
@@ -79,7 +78,6 @@ class Paginator implements IPaginator
      */
     public function __get(string $name)
     {
-
         switch ($name) {
 
             case  'page' :
@@ -110,7 +108,6 @@ class Paginator implements IPaginator
      */
     public function __set(string $name, $value)
     {
-
         switch ($name) {
 
             case  'page' :
@@ -188,5 +185,4 @@ class Paginator implements IPaginator
 
         throw new Exception('Pagination parameter orderBy is not correct. Such parameter does not exist.', 'lf2110', [], 400) ;
     }
-
 }

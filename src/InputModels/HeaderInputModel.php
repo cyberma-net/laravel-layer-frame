@@ -2,7 +2,7 @@
 /**
 
  *
- 
+
  * Date: 21.02.2021
  */
 
@@ -11,7 +11,6 @@ namespace Cyberma\LayerFrame\InputModels;
 
 class HeaderInputModel
 {
-
     protected $validationRulesForHeader = [
         'lang' => 'sometimes|in:en_US'
     ];

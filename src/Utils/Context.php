@@ -4,17 +4,16 @@
  * Class that can handle any type of content. Usually use as a data carrier for additional data
  *
  * Created by PhpStorm.
- 
+
  * Date: 21.2.2021
  * Time: 10:20
  */
 
-namespace Cyberma\LayerFrame\Supporting;
+namespace Cyberma\LayerFrame\Utils;
 
 
 class Context
 {
-
     private $data;
 
     /**

@@ -54,7 +54,6 @@ class Handler extends ExceptionHandler
      */
     public function render($request, Exception|\Throwable $exception)
     {
-
        if ($exception instanceof CodeException) {
            return resolve('ExceptionHandler')->translateToResponse($exception, $request->headers->get('content-type'));
        }

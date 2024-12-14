@@ -2,7 +2,7 @@
 /**
 
  *
- 
+
  * Date: 21.02.2021
  */
 
@@ -17,7 +17,6 @@ use Illuminate\Support\Facades\Validator as ValidatorFacade;
 
 class HeaderParser
 {
-
     /**
      * @param HeaderInputModel $inputModel
      * @param array $apiHeader
@@ -48,7 +47,6 @@ class HeaderParser
      */
     protected function getValidator (array $data, array $rules, array $messages = []) : Validator
     {
-        return  empty($messages) ? ValidatorFacade::make($data, $rules) : ValidatorFacade::make($data, $rules, $messages);
+        return empty($messages) ? ValidatorFacade::make($data, $rules) : ValidatorFacade::make($data, $rules, $messages);
     }
-
 }

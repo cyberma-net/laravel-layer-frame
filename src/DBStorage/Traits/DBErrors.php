@@ -8,7 +8,6 @@ use Cyberma\LayerFrame\Exceptions\Exception;
 
 trait DBErrors
 {
-
     /**
      * @param QueryException $exception
      * @return mixed
@@ -39,7 +38,6 @@ trait DBErrors
      */
     protected function getException ($code, string $message)
     {
-
         $exceptions = $this->modelMap->getDBExceptions();
 
         if (!isset($exceptions[$code]))
