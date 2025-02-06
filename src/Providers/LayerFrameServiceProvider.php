@@ -1,10 +1,4 @@
 <?php
-/**
-
- *
-
- * Date: 07.02.2021
- */
 
 namespace Cyberma\LayerFrame\Providers;
 

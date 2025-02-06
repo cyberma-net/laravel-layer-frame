@@ -35,12 +35,12 @@ class Handler extends ExceptionHandler
      *
      * This is a great spot to send exceptions to Sentry, Bugsnag, etc.
      *
-     * @param Exception|\Throwable $exception
+     * @param Exception|\Throwable $e
      * @return void
      */
-    public function report(Exception|\Throwable $exception)
+    public function report(Exception|\Throwable $e)
     {
-        parent::report($exception);
+        parent::report($e);
     }
 
 
@@ -48,23 +48,22 @@ class Handler extends ExceptionHandler
      * Render an exception into an HTTP response.
      *
      * @param Request $request
-     * @param Exception|\Throwable $exception
+     * @param Exception|\Throwable $e
      * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse|Response|\Illuminate\Routing\Redirector|\Symfony\Component\HttpFoundation\Response
      * @throws \Throwable
      */
-    public function render($request, Exception|\Throwable $exception)
+    public function render($request, Exception|\Throwable $e)
     {
-       if ($exception instanceof CodeException) {
-           return resolve('ExceptionHandler')->translateToResponse($exception, $request->headers->get('content-type'));
+       if ($e instanceof CodeException) {
+           return resolve('ExceptionHandler')->translateToResponse($e, $request->headers->get('content-type'));
        }
 
-        if ($exception instanceof TokenMismatchException) {
+        if ($e instanceof TokenMismatchException) {
             return redirect('/');
         }
 
-        return parent::render($request, $exception);
+        return parent::render($request, $e);
     }
-
 
     /**
      * Convert an authentication exception into an unauthenticated response.

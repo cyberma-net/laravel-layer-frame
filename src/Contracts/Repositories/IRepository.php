@@ -1,10 +1,4 @@
 <?php
-/**
-
- *
- 
- * Date: 21.02.2021
- */
 
 namespace Cyberma\LayerFrame\Contracts\Repositories;
 
@@ -79,12 +73,14 @@ interface IRepository
      * 'date=', 'date>', 'date>=', 'date<=', 'date<'*
      * @param array|string[] $orderBy
      * @param array|int[] $pagination
+     * @param string $collectionKeyParameter
      * @return Collection
      */
      public function get(array $attributes = [],
                         array $conditions = [],
                         array $pagination = ['page' => 1, 'perPage' => 20],
-                        array $orderBy = ['attribute' => 'id', 'order' => 'desc']): Collection;
+                        array $orderBy = ['attribute' => 'id', 'order' => 'desc'],
+                        string $collectionKeyParameter = null): Collection;
 
     /**
      * @param array $attributes
@@ -108,10 +104,11 @@ interface IRepository
      * @param array $attributes
      * @param array $pagination
      * @param array $orderBy
+     * @param string|null $collectionKeyParameter
      * @return Collection
      */
     public function searchInAttributes(string $keywords, array $searchedAttributes, array $attributes = [],
-                                       array $pagination = [], array $orderBy = []): Collection;
+                                       array  $pagination = [], array $orderBy = [], string $collectionKeyParameter = null): Collection;
 
 
     public function beginTransaction();

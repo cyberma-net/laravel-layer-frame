@@ -1,10 +1,4 @@
 <?php
-/**
-
-
- * Date: 5.2.2018
- * Time: 22:50
- */
 
 namespace Cyberma\LayerFrame\Errors;
 

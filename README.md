@@ -40,17 +40,21 @@ Services handle business logic
 ### Repositories
 
 Connects Model Map, Data Mapper and Model Factory, maps model to a raw array
-that is sent to the SQL queries.
+that is sent to the SQL queries. Repository requires DBMapper, DBStorage and ModelFactory to work. 
 
-### Data Mappers
-DataMapper is a layer that knows how to communicate with SQL. It contains a few standard queries
-and provides interface for any custom queries.
+### DBStorage
+DBStorageis a layer that knows how to communicate with SQL. It contains a few standard queries
+and provides interface for any custom queries. Its input should contain an object of columns and data. The returned
+value is raw data ready for mapping.
 
 ### SQL Database
 
 ## Objects
 
-### Input Maps
+### API Maps and mappers
+
+In the controller, the data in the form of models or array of models need to mapped to raw data convertable to a json.
+This can contain any custom mapping if needed.
 
 ### Models
 
@@ -81,5 +85,7 @@ All classes in this folder inherit ModelMap containing all the important functio
 
 ### Exceptions
 
+All exceptions should be listed in the Exception.csv with its model code and a number. The list of exceptions
+helps finding the place, where the exception was thrown.
 
 Last update: 27th Nov 2023.

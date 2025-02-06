@@ -61,7 +61,8 @@ class Repository implements IRepository
     public function get(array $attributes = [],
                         array $conditions = [],
                         array $pagination = [/*'page' => 1, 'perPage' => 20*/],
-                        array $orderBy = [/*'attribute' => 'id', 'order' => 'desc'*/]): Collection
+                        array $orderBy = [/*'attribute' => 'id', 'order' => 'desc'*/],
+                        string $collectionKeyParameter = null): Collection
     {
         $columnNames = $this->dbMapper->mapAttributesNamesToColumns($attributes);
         $conditions = $this->dbMapper->mapConditionsColumnNames($conditions);
@@ -69,7 +70,7 @@ class Repository implements IRepository
 
         $dbRows = $this->dbStorage->getByConditions($columnNames, $conditions, $pagination, $mappedOrderBy);
 
-        return $this->dbMapper->demap($dbRows);
+        return $this->dbMapper->demap($dbRows, $collectionKeyParameter);
     }
 
     /**
@@ -102,16 +103,18 @@ class Repository implements IRepository
         return $this->dbMapper->demapSingle($dbRows[0]);
     }
 
+
     /**
      * @param string $keywords
      * @param array $searchedAttributes
      * @param array $attributes
      * @param array $pagination
      * @param array $orderBy
+     * @param string|null $collectionKeyParameter
      * @return Collection
      */
     public function searchInAttributes(string $keywords, array $searchedAttributes, array $attributes = [],
-                                       array  $pagination = [], array $orderBy = []): Collection
+                                       array  $pagination = [], array $orderBy = [], string $collectionKeyParameter = null): Collection
     {
         $columnNames = $this->dbMapper->mapAttributesNamesToColumns($attributes);
         $searchedColumns = $this->dbMapper->mapAttributesNamesToColumns($searchedAttributes, [], false);
@@ -119,7 +122,7 @@ class Repository implements IRepository
 
         $dbRows = $this->dbStorage->searchInColumns($keywordsAsArray, $searchedColumns, $columnNames, $pagination, $orderBy);
 
-        return $this->dbMapper->demap($dbRows);
+        return $this->dbMapper->demap($dbRows, $collectionKeyParameter);
     }
 
     /**

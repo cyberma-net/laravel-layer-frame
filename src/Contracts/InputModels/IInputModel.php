@@ -1,10 +1,4 @@
 <?php
-/**
-
- *
- 
- * Date: 07.09.2019
- */
 
 namespace Cyberma\LayerFrame\Contracts\InputModels;
 

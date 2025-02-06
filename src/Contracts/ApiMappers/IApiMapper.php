@@ -1,8 +1,4 @@
 <?php
-/**
- *
- * Date: 23.04.2021
- */
 
 namespace Cyberma\LayerFrame\Contracts\ApiMappers;
 

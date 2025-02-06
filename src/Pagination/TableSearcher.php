@@ -1,10 +1,4 @@
 <?php
-/**
-
-
- * Date: 14.6.2018
- * Time: 15:48
- */
 
 namespace Cyberma\LayerFrame\Pagination;
 
@@ -79,7 +73,6 @@ class TableSearcher implements ITableSearcher
         $this->searchAt = $searchAt;
         $this->operator = $operator;
     }
-
 
     /**
      * @return array

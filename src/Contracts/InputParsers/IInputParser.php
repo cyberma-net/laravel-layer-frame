@@ -1,10 +1,4 @@
 <?php
-/**
-
- *
- 
- * Date: 22.03.2021
- */
 
 namespace Cyberma\LayerFrame\Contracts\InputParsers;
 

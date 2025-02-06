@@ -1,10 +1,4 @@
 <?php
-/**
-
- *
-
- * Date: 19.01.2021
- */
 
 namespace Cyberma\LayerFrame\Utils;
 

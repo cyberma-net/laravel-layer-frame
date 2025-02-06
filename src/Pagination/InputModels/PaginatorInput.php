@@ -1,10 +1,4 @@
 <?php
-/**
-
- 
- * Date: 2.3.2018
- * Time: 22:42
- */
 
 namespace Cyberma\LayerFrame\Pagination\InputModels;
 

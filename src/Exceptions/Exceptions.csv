@@ -17,6 +17,3 @@ lf2115;Requested attribute does not exist in Model.;Model
 lf2116;Requested attribute $'. $name . ' does not exist in the class: ;Paginator
 lf2117;Requested attribute $'. $name . ' does not exist in InputModel: ;InputModel
 lf2118;Search parameters are not correct.;SearcherInput
-lf2119;;
-lf2120;;
-

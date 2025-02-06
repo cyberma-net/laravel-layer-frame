@@ -1,10 +1,7 @@
 <?php
+
 namespace Cyberma\LayerFrame\Contracts\Models;
 
-/**
- *
- * Date: 21.02.2021
- */
 interface IModel
 {
     /**

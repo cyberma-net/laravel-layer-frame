@@ -1,10 +1,4 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: Peter
- * Date: 21.02.2021
- * Time: 16:25
- */
 
 namespace Cyberma\LayerFrame\Languages;
 

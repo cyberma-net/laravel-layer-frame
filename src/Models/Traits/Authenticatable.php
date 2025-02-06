@@ -1,10 +1,5 @@
 <?php
-/**
 
- *
- 
- * Date: 25.02.2021
- */
 namespace Cyberma\LayerFrame\Models\Traits;
 
 trait Authenticatable

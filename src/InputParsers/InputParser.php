@@ -1,10 +1,4 @@
 <?php
-/**
-
- 
- * Date: 27.2.2018
- * Time: 15:01
- */
 
 namespace  Cyberma\LayerFrame\InputParsers;
 

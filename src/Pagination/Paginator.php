@@ -1,10 +1,4 @@
 <?php
-/**
-
-
- * Date: 14.6.2018
- * Time: 15:48
- */
 
 namespace Cyberma\LayerFrame\Pagination;
 

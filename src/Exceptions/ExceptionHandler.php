@@ -1,10 +1,4 @@
 <?php
-/**
- * Created by PhpStorm.
-
- * Date: 18.1.2018
- * Time: 16:09
- */
 
 namespace Cyberma\LayerFrame\Exceptions;
 

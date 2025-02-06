@@ -1,10 +1,4 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: Peter
- * Date: 26.1.2021
- * Time: 11:19
- */
 
 namespace  Cyberma\LayerFrame\Models\Traits;
 
