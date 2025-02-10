@@ -39,8 +39,8 @@ class DBMapper implements IDBMapper
      */
     public function getColumnNames(array $attributes = []): array
     {
-        if ($attributes === []) {   //we don't want to use SELECT *, rather list all columns - security reasons/best practices
-            $columns = $this->mapAttributesNamesToColumns($this->modelMap->getAttributes());
+        if ($attributes === [] || in_array('*', $attributes)) {   //we don't want to use SELECT *, rather list all columns - security reasons/best practices
+            $columns = $this->mapAttributesNamesToColumns($this->modelMap->getAttributes($attributes));
         }
 
         // primary key is always present in the query
@@ -77,24 +77,23 @@ class DBMapper implements IDBMapper
     public function mapAttributesNamesToColumns(array $attributes = [], array $include = [], bool $applyAliases = true): array
     {
         $allAttributes = false;
-        if($attributes === []) {
+        if($attributes === [] || in_array('*', $attributes)) {
             $allAttributes = true;
         }
         elseif($include !== []) {
             $attributes = array_unique(array_merge($attributes, $include));
         }
 
-        if($attributes !== []) { // add mandatory attributes
+        if(!$allAttributes) { // add mandatory attributes
             $attributes = array_unique(array_merge($attributes,  $this->modelMap->getMandatoryAttributes()));
         }
 
         $columns = [];
-        foreach ($this->modelMap->getAttributeMap() as $attr => $column) {
+        foreach ($this->modelMap->getAttributeMap($attributes) as $attr => $column) {
             if ($allAttributes || (in_array($attr, $attributes) && !in_array($column, $columns)))  //add only what is missing
                 $columns[$attr] = $column;
         }
 
-        $columns = $this->removeHiddenColumns($columns);
         if($applyAliases) {
             $columns = $this->applyColumnNamesAliases($columns);
         }
@@ -313,13 +312,14 @@ class DBMapper implements IDBMapper
 
     /**
      * @param array $columns
+     * @param array $attributes
      * @return array
      */
-    protected function removeHiddenColumns (array &$columns): array
+    protected function removeHiddenColumns (array &$columns, array $attributes = []): array
     {
-        //remove hidden columns
-        foreach ($this->modelMap->getHidden() as $hid) {
-            $attrForRemoval = array_search($hid, $columns);
+        //remove hidden columns if they are not explicitely listed in attributes
+        foreach ($this->modelMap->getHiddenColumns() as $hid) {
+            $attrForRemoval = array_search($hid, $columns) && !array_search($hid, $attributes);
             if ($attrForRemoval !== false) {
                 unset($columns[$attrForRemoval]);
             }

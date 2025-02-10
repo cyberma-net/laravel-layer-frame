@@ -37,7 +37,7 @@ class DBStorage implements IDBStorage
      */
     public function table(array $columnsNames = []): Builder
     {
-        if($columnsNames === []) {
+        if ($columnsNames === []) {
             $columnsNames = $this->modelMap->getAllColumns();
         }
 

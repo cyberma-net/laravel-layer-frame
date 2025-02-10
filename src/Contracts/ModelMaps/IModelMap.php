@@ -68,12 +68,12 @@ interface IModelMap
     /**
      * @return array
      */
-    public function getAttributeMap(): array;
+    public function getAttributeMap(array $attributes = []): array;
 
     /**
      * @return array
      */
-    public function getAttributes(): array;
+    public function getAttributes(array $includeHiddenAttributes = []): array;
 
     /**
      * @return array
@@ -103,7 +103,7 @@ interface IModelMap
     /**
      * @return array
      */
-    public function getHidden(): array;
+    public function getHiddenColumns(): array;
 
     /**
      * @param string $column

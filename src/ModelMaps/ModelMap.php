@@ -27,7 +27,7 @@ class ModelMap implements IModelMap
 
     const JSON_COLUMNS_FORCE_OBJECT = [];    //force json_encode to use {}, instead of simple array [].
 
-    const HIDE_COLUMNS = [];    //will not be retrieved from db. Typically deleted_at
+    const HIDEN_COLUMNS = [];    //will not be retrieved from db. Typically deleted_at
 
     const SEARCHABLE_ATTRIBUTES = [];   //simple list of attributes that can be searched using dbMapper->search
 
@@ -145,19 +145,44 @@ class ModelMap implements IModelMap
     }
 
     /**
+     * @param array $attributes
      * @return array
      */
-    public function getAttributeMap() : array
+    public function getAttributeMap(array $attributes = []) : array
     {
-        return static::ATTRIBUTES_MAP;
+        if($attributes === []) {
+            return array_filter(static::ATTRIBUTES_MAP, fn($value) => !in_array($value, static::HIDEN_COLUMNS));
+        }
+        elseif (in_array('*', $attributes)) {
+            return array_filter(
+                static::ATTRIBUTES_MAP,
+                fn($value, $key) => !in_array($value, static::HIDEN_COLUMNS) || in_array($key, $attributes),
+                ARRAY_FILTER_USE_BOTH
+            );
+
+        }
+
+        return array_filter(static::ATTRIBUTES_MAP, fn($key) => !in_array($key, $attributes), ARRAY_FILTER_USE_KEY);
+
     }
 
     /**
+     * @param array $includeHiddenAttributes
      * @return array
      */
-    public function getAttributes(): array
+    public function getAttributes(array $includeHiddenAttributes = []) : array
     {
-        return array_keys(static::ATTRIBUTES_MAP);
+        $allAttributes = array_keys(static::ATTRIBUTES_MAP);
+        if($includeHiddenAttributes === []) {
+            return $allAttributes;
+        }
+        elseif(in_array('*', $includeHiddenAttributes)) {
+            $allAttributes[] = '*';
+
+            return $allAttributes;
+        }
+
+        return array_filter($allAttributes, fn($item) => !in_array($this->getColumnForAttribute($item), static::HIDEN_COLUMNS) || in_array($item, $includeHiddenAttributes));
     }
 
     /**
@@ -165,7 +190,10 @@ class ModelMap implements IModelMap
      */
     public function getAllColumns(): array
     {
-        return array_diff(array_values(static::ATTRIBUTES_MAP), static::HIDE_COLUMNS);
+        return array_diff(
+            array_values(self::ATTRIBUTES_MAP),
+            array_diff(self::HIDEN_COLUMNS)
+        );
     }
 
     /**
@@ -214,9 +242,9 @@ class ModelMap implements IModelMap
     /**
      * @return array
      */
-    public function getHidden () : array
+    public function getHiddenColumns () : array
     {
-        return static::HIDE_COLUMNS;
+        return static::HIDEN_COLUMNS;
     }
 
     /**
