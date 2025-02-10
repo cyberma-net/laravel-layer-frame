@@ -58,8 +58,7 @@ interface IDBMapper
      * @param array $attributes
      * @return array
      */
-    public function mapAttributesToColumns(array $attributes) : array;
-
+    public function mapAttributesToColumns(array $attributes = []): array;
     /**
      * @param array $conditions
      * @return array

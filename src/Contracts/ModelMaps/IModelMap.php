@@ -73,6 +73,11 @@ interface IModelMap
     /**
      * @return array
      */
+    public function getFullAttributeMap() : array;
+
+    /**
+     * @return array
+     */
     public function getAttributes(array $includeHiddenAttributes = []): array;
 
     /**

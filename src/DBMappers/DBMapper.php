@@ -60,7 +60,7 @@ class DBMapper implements IDBMapper
      */
     public function mapAttributeNameToColumn(string $attributeName): string
     {
-        $map = $this->modelMap->getAttributeMap();
+        $map = $this->modelMap->getFullAttributeMap();
 
         if(array_key_exists($attributeName, $map)) {
             return $map[$attributeName];
@@ -98,7 +98,7 @@ class DBMapper implements IDBMapper
             $columns = $this->applyColumnNamesAliases($columns);
         }
 
-        return $columns;
+        return array_values($columns);
     }
 
     /**
@@ -216,7 +216,7 @@ class DBMapper implements IDBMapper
     public function mapColumnsToAttributes (\stdClass $row, array $reverseAliases = []) : array
     {
         $attributes = [];
-        foreach ($this->modelMap->getAttributeMap() as $attr => $column) {
+        foreach ($this->modelMap->getFullAttributeMap() as $attr => $column) {
             if (property_exists($row, $column))
                 $attributes[$attr] = $row->$column;
         }
@@ -244,7 +244,7 @@ class DBMapper implements IDBMapper
             $conditions[] = $incomingConditions;
         }
 
-        $modelMap = $this->modelMap->getAttributeMap();
+        $modelMap = $this->modelMap->getFullAttributeMap();
         foreach($conditions as $key => $criterium) {
             if(!array_key_exists($criterium[0], $modelMap)) {
                 throw new CodeException('Get by $conditions does not have a correct attribute. Attribute does not exist.', 'lf2101',
@@ -282,10 +282,10 @@ class DBMapper implements IDBMapper
      * @param array $attributes
      * @return array
      */
-    public function mapAttributesToColumns(array $attributes): array
+    public function mapAttributesToColumns(array $attributes = []): array
     {
         $primaryKey = $this->modelMap->getPrimaryKey();
-        $attributesMap =  $this->modelMap->getAttributeMap();
+        $attributesMap =  $this->modelMap->getAttributeMap($attributes);
 
         $columns = [];
         foreach ($attributes as $attr => $value) {
