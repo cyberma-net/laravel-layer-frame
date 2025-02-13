@@ -17,10 +17,10 @@ class ApiMapper implements IApiMapper
             //if attribute is numeric, that means, that it is not associative ('attrName' => 'newAttrName'), just attributes listed in simple array to avoid repeating of the attr name
 
             if(is_numeric($attr)) {
-                $outAttributes[$apiName]  = array_key_exists($apiName, $attributes) ? $attributes[$apiName] : null;
+                $outAttributes[$apiName] = array_key_exists($apiName, $attributes) ? $attributes[$apiName] : null;
             }
             else {
-                $outAttributes[$apiName]  = array_key_exists($attr, $attributes) ? $attributes[$attr] : null;
+                $outAttributes[$apiName] = array_key_exists($attr, $attributes) ? $attributes[$attr] : null;
             }
         }
 

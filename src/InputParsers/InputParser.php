@@ -10,7 +10,6 @@ use Illuminate\Support\Facades\Validator as ValidatorFacade;
 
 class InputParser implements IInputParser
 {
-
     /**
      * @param IInputModel $inputModel
      * @param array $requestData

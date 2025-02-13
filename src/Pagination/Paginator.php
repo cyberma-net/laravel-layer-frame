@@ -32,17 +32,17 @@ class Paginator implements IPaginator
     /**
      * @param int $page
      * @param int $perPage
-     * @param string $orderBy
+     * @param string $sortBy
      * @param string $order
      */
-    public function setPaginator (int $page = 1, int $perPage = 30, string $orderBy = 'createdAt', string $order = 'asc')
+    public function setPaginator (int $page = 1, int $perPage = 30, string $sortBy = 'createdAt', string $order = 'asc')
     {
         // 2. parse the data sent by the api
         //    and put it to the registrationInput inputFields
         $this->paginatorInput = $this->inputParser->parse($this->paginatorInput, [
             'page' => $page,
             'perPage' => $perPage,
-            'orderBy' => $orderBy,
+            'orderBy' => $sortBy,
             'order' => $order
         ], 'urlPaginate');
 
@@ -60,10 +60,9 @@ class Paginator implements IPaginator
 
         $this->page = $page;
         $this->perPage = $perPage;
-        $this->orderBy = $orderBy;
+        $this->orderBy = $sortBy;
         $this->order = $order;
     }
-
 
     /**
      * @param string $name
@@ -94,7 +93,6 @@ class Paginator implements IPaginator
         throw new CodeException('Requested attribute $'. $name . ' does not exist in the class: ' . self::class, 'lf2116', ['class' => static::class]) ;
     }
 
-
     /**
      * @param string $name
      * @param $value
@@ -103,7 +101,6 @@ class Paginator implements IPaginator
     public function __set(string $name, $value)
     {
         switch ($name) {
-
             case  'page' :
                 $this->page = $value;
                 break;
@@ -156,7 +153,6 @@ class Paginator implements IPaginator
         return  $this->perPage;
     }
 
-
     /**
      * @return int
      */
@@ -164,7 +160,6 @@ class Paginator implements IPaginator
     {
         return ($this->page -1) * $this->perPage;
     }
-
 
     /**
      * @param array $attributeMap

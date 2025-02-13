@@ -315,7 +315,7 @@ class DBMapper implements IDBMapper
      * @param array $attributes
      * @return array
      */
-    protected function removeHiddenColumns (array &$columns, array $attributes = []): array
+    public function removeHiddenColumns (array &$columns, array $attributes = []): array
     {
         //remove hidden columns if they are not explicitely listed in attributes
         foreach ($this->modelMap->getHiddenColumns() as $hid) {
@@ -324,6 +324,7 @@ class DBMapper implements IDBMapper
                 unset($columns[$attrForRemoval]);
             }
         }
+
         return $columns;
     }
 

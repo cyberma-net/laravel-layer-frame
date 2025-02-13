@@ -56,6 +56,7 @@ class Repository implements IRepository
      * 'date=', 'date>', 'date>=', 'date<=', 'date<'*, 'between', 'in'
      * @param array|int[] $pagination
      * @param array|string[] $orderBy
+     * @param string $collectionKeyParameter - is used, it will make this attribute a key for the collection. E.g. collection of users with key being the ID
      * @return Collection
      */
     public function get(array $attributes = [],

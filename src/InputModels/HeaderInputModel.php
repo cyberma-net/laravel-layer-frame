@@ -19,7 +19,6 @@ class HeaderInputModel
         return $this->validationRulesForHeader;
     }
 
-
     /**
      * @param array $attr
      */

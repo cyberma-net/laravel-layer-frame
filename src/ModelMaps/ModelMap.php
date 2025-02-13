@@ -198,8 +198,8 @@ class ModelMap implements IModelMap
     public function getAllColumns(): array
     {
         return array_diff(
-            array_values(self::ATTRIBUTES_MAP),
-            array_diff(self::HIDEN_COLUMNS)
+            array_values(static::ATTRIBUTES_MAP),
+            array_diff(static::HIDEN_COLUMNS)
         );
     }
 
