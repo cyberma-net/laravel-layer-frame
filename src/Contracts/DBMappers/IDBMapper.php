@@ -83,11 +83,4 @@ interface IDBMapper
      * @return string
      */
     public function mapAttributeNameToColumn(string $attributeName): string;
-
-    /**
-     * @param array $columns
-     * @param array $attributes
-     * @return array
-     */
-    public function removeHiddenColumns (array &$columns, array $attributes = []): array;
 }
