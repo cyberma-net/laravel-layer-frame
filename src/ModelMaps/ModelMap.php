@@ -162,7 +162,7 @@ class ModelMap implements IModelMap
 
         }
 
-        return array_filter(static::ATTRIBUTES_MAP, fn($key) => !in_array($key, $attributes), ARRAY_FILTER_USE_KEY);
+        return array_filter(static::ATTRIBUTES_MAP, fn($key) => in_array($key, $attributes), ARRAY_FILTER_USE_KEY);
     }
 
     /**
