@@ -145,7 +145,7 @@ class ModelMap implements IModelMap
     }
 
     /**
-     * @param array $attributes
+     * @param array $attributes - attribute names only
      * @return array
      */
     public function getAttributeMap(array $attributes = []) : array

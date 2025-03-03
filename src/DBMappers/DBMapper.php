@@ -279,16 +279,16 @@ class DBMapper implements IDBMapper
     }
 
     /**
-     * @param array $attributes
+     * @param array $attributesWithValues
      * @return array
      */
-    public function mapAttributesToColumns(array $attributes = []): array
+    public function mapAttributesToColumns(array $attributesWithValues = []): array
     {
         $primaryKey = $this->modelMap->getPrimaryKey();
-        $attributesMap =  $this->modelMap->getAttributeMap($attributes);
+        $attributesMap =  $this->modelMap->getAttributeMap(array_keys($attributesWithValues));
 
         $columns = [];
-        foreach ($attributes as $attr => $value) {
+        foreach ($attributesWithValues as $attr => $value) {
             if (array_key_exists($attr, $attributesMap)) {
                 //if value is an object, we cannot store it to DB directly. toDBArray() is called. Each model implements it
 
@@ -302,7 +302,7 @@ class DBMapper implements IDBMapper
 
         //if primary key is null, then unset it - necessary for insert
         foreach($primaryKey as $key) {
-            if(!isset($attributes[$key]) && array_key_exists($key, $columns)) {
+            if(!isset($attributesWithValues[$key]) && array_key_exists($key, $columns)) {
                 unset ($columns[$key]);
             }
         }

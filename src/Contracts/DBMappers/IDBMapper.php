@@ -55,10 +55,10 @@ interface IDBMapper
     public function demapSingle (\stdClass $row) : ?IModel;
 
     /**
-     * @param array $attributes
+     * @param array $attributesWithValues
      * @return array
      */
-    public function mapAttributesToColumns(array $attributes = []): array;
+    public function mapAttributesToColumns(array $attributesWithValues = []): array;
     /**
      * @param array $conditions
      * @return array
