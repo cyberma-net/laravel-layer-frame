@@ -38,6 +38,26 @@ interface IRepository
     public function deleteById(int $id, bool $permanentDelete = false): int;
 
     /**
+     * @param array $primaryKeyAttributes
+     * @param bool $permanentDelete
+     * @return int -number of affected rows
+     */
+    public function deleteByPrimaryKey(array $primaryKeyAttributes, bool $permanentDelete = false): int;
+
+    /**
+     * @param array $conditions
+     *  Format1: [  ['attribute', 'operator', 'value'], ['attribute', 'operator', 'value',] ]
+     *  Short format for a single cirterium ['attribute', 'optional operator', 'value', ]
+     *  Available operators '=' - default - no need to use, '<=', '>=', 'like', 'like%', '%like%', '%like', 'null', 'not null', 'in', 'between'
+     *  'date=', 'date>', 'date>=', 'date<=', 'date<', 'in'
+     * @param int $limit
+     * @param bool $permanentDelete
+     *
+     * @return int - number of affected rows
+     */
+    public function deleteByConditions(array $conditions, int $limit = 100, bool $permanentDelete = false) : int;
+
+    /**
      * @param IModel $model
      * @param bool $permanentDelete
      * @return int -number of affected rows

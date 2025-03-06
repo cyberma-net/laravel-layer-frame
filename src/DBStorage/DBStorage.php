@@ -17,7 +17,6 @@ use stdClass;
 
 class DBStorage implements IDBStorage
 {
-
     use DBErrors;
 
     /**
@@ -32,7 +31,7 @@ class DBStorage implements IDBStorage
     }
 
     /**
-     * @param array $columnsNames
+     * @param array $columnsNames - use [null] to omit "SELECT", for example for DELETE command
      * @return Builder
      */
     public function table(array $columnsNames = []): Builder
@@ -41,7 +40,9 @@ class DBStorage implements IDBStorage
             $columnsNames = $this->modelMap->getAllColumns();
         }
 
-        $query = DB::table($this->modelMap->getTable())->select($columnsNames);
+        $query = $columnsNames === [null]
+            ? DB::table($this->modelMap->getTable())
+            : DB::table($this->modelMap->getTable())->select($columnsNames);
 
         if ($this->modelMap->hasSoftDeletes()) {
             $query->whereNull($this->modelMap->getTable() . '.deleted_at');
@@ -116,7 +117,7 @@ class DBStorage implements IDBStorage
      * Short format for a single cirterium ['column', 'optional operator', 'value', ]
      * Available operators '=' - default - no need to use, '<=', '>=', 'like', 'like%', '%like%', '%like', 'null', 'not null', 'in', 'between'
      * 'date=', 'date>', 'date>=', 'date<=', 'date<', 'in'
-     * @param array $columnNames
+     * @param array $columnNames - use [null] to omit SELECT, e.g. for DELETE
      * @return Builder
      */
     public function queryByConditions(array $conditions, array $columnNames = []) : Builder
@@ -145,12 +146,11 @@ class DBStorage implements IDBStorage
      * @param string $operator
      * @return Builder
      */
-    public function prepareQueryWhere (Builder &$query, string $column, $value, string $operator = '=') : Builder
+    public function prepareQueryWhere(Builder &$query, string $column, $value, string $operator = '=') : Builder
     {
         $namespacedColumn = $this->modelMap->getTable() . '.' . $column;
 
         switch (strtolower($operator)) {
-
             case '%like%' :
                 $query->where($namespacedColumn, 'like',  '%' . $value . '%'); break;
             case 'like' :
@@ -518,7 +518,6 @@ class DBStorage implements IDBStorage
         $table = $this->modelMap->getTable();
 
         if ($this->modelMap->hasSoftDeletes() && !$permanentDelete) {
-
             $updatedColumns[$table. '.deleted_at'] = Carbon::now()->toDateTimeString();
 
             $affectedRows = DB::table($table)->where($table . '.id', $id)->whereNull('deleted_at')
@@ -533,6 +532,78 @@ class DBStorage implements IDBStorage
         return $affectedRows;
     }
 
+    /**
+     * @param array $primaryKeyColumns - array of primary keys, if not all provided, the delete will fail
+     * @param bool $permanentDelete
+     * @return int - number of affected rows
+     */
+    public function deleteByPrimaryKey(array $primaryKeyColumns, bool $permanentDelete = false) : int
+    {
+        try {
+            $primaryKey = $this->modelMap->getPrimaryKeyColumns();
+
+            $table = $this->modelMap->getTable();
+            $query = DB::table($table);
+
+            foreach($primaryKey as $key) {
+                if(!isset($primaryKeyColumns[$key])) {
+                    throw new Exception('$primaryKeyColumns attribute in deleteByPrimaryKey doesn\'t contain all of the primary keys defined in the ModelMap', 'lf2119');
+                }
+                $query->where($key, $primaryKeyColumns[$key]);
+            }
+
+            if ($this->modelMap->hasSoftDeletes() && !$permanentDelete) {
+                $updatedColumns[$table. '.deleted_at'] = Carbon::now()->toDateTimeString();
+
+                $affectedRows = DB::table($table)->whereNull('deleted_at')
+                    ->limit(1)->update(
+                        $updatedColumns
+                    );
+
+                return $affectedRows;
+            }
+
+            return DB::table($this->modelMap->getTable())->limit(1)->delete();
+        }
+        catch (QueryException $e) {
+            $this->processSQLerrors($e);
+        }
+    }
+
+
+    /**
+     * @param array $conditions
+     *  Format1: [  ['column', 'operator', 'value'], ['column', 'operator', 'value',] ]
+     *  Short format for a single cirterium ['column', 'optional operator', 'value', ]
+     *  Available operators '=' - default - no need to use, '<=', '>=', 'like', 'like%', '%like%', '%like', 'null', 'not null', 'in', 'between'
+     *  'date=', 'date>', 'date>=', 'date<=', 'date<', 'in'
+     * @param int $limit
+     * @param bool $permanentDelete
+     *
+     * @return int - number of affected rows
+     */
+    public function deleteByConditions(array $conditions, int $limit = 100, bool $permanentDelete = false) : int
+    {
+        try {
+            $table = $this->modelMap->getTable();
+            $query = $permanentDelete
+                ? $this->queryByConditions($conditions, [null])
+                : $this->queryByConditions($conditions);
+
+            if ($this->modelMap->hasSoftDeletes() && !$permanentDelete) {
+                $updatedColumns[$table. '.deleted_at'] = Carbon::now()->toDateTimeString();
+
+                $affectedRows = $query->limit($limit)->update($updatedColumns);
+
+                return $affectedRows;
+            }
+
+            return $query->limit($limit)->delete();
+        }
+        catch (QueryException $e) {
+            $this->processSQLerrors($e);
+        }
+    }
 
     public function beginTransaction()
     {

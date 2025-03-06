@@ -66,10 +66,10 @@ class Repository implements IRepository
                         string $collectionKeyParameter = null): Collection
     {
         $columnNames = $this->dbMapper->mapAttributesNamesToColumns($attributes);
-        $conditions = $this->dbMapper->mapConditionsColumnNames($conditions);
+        $conditionsColumns = $this->dbMapper->mapConditionsColumnNames($conditions);
         $mappedOrderBy = $this->dbMapper->mapOrderBy($orderBy);
 
-        $dbRows = $this->dbStorage->getByConditions($columnNames, $conditions, $pagination, $mappedOrderBy);
+        $dbRows = $this->dbStorage->getByConditions($columnNames, $conditionsColumns, $pagination, $mappedOrderBy);
 
         return $this->dbMapper->demap($dbRows, $collectionKeyParameter);
     }
@@ -80,9 +80,9 @@ class Repository implements IRepository
      */
     public function getCount(array $conditions = []): int
     {
-        $conditions = $this->dbMapper->mapConditionsColumnNames($conditions);
+        $conditionsColumns = $this->dbMapper->mapConditionsColumnNames($conditions);
 
-        return $this->dbStorage->countByConditions($conditions);
+        return $this->dbStorage->countByConditions($conditionsColumns);
     }
 
     /**
@@ -93,9 +93,9 @@ class Repository implements IRepository
     public function getFirst(array $attributes = [], array $conditions = []): ?IModel
     {
         $columnNames = $this->dbMapper->mapAttributesNamesToColumns($attributes);
-        $conditions = $this->dbMapper->mapConditionsColumnNames($conditions);
+        $conditionsColumns = $this->dbMapper->mapConditionsColumnNames($conditions);
 
-        $dbRows = $this->dbStorage->getByConditions($columnNames, $conditions, ['perPage' => 1]);
+        $dbRows = $this->dbStorage->getByConditions($columnNames, $conditionsColumns, ['perPage' => 1]);
 
         if(empty($dbRows) || $dbRows->isEmpty()) {
             return null;
@@ -183,6 +183,36 @@ class Repository implements IRepository
     }
 
     /**
+     * @param array $primaryKeyAttributes
+     * @param bool $permanentDelete
+     * @return int -number of affected rows
+     */
+    public function deleteByPrimaryKey(array $primaryKeyAttributes, bool $permanentDelete = false): int
+    {
+        $primaryColumns = $this->dbMapper->mapAttributesNamesToColumns($primaryKeyAttributes);
+
+        return $this->dbStorage->deleteByPrimaryKey($primaryColumns, $permanentDelete);
+    }
+
+    /**
+     * @param array $conditions
+     *  Format1: [  ['attribute', 'operator', 'value'], ['attribute', 'operator', 'value',] ]
+     *  Short format for a single cirterium ['attribute', 'optional operator', 'value', ]
+     *  Available operators '=' - default - no need to use, '<=', '>=', 'like', 'like%', '%like%', '%like', 'null', 'not null', 'in', 'between'
+     *  'date=', 'date>', 'date>=', 'date<=', 'date<', 'in'
+     * @param int $limit
+     * @param bool $permanentDelete
+     *
+     * @return int - number of affected rows
+     */
+    public function deleteByConditions(array $conditions, int $limit = 100, bool $permanentDelete = false) : int
+    {
+        $conditionsColumns = $this->dbMapper->mapConditionsColumnNames($conditions);
+
+        return $this->dbStorage->deleteByConditions($conditionsColumns, $limit, $permanentDelete);
+    }
+
+    /**
      * @param IModel $model
      * @param string[] $selectedAttributes
      * @return int -number of affected rows
@@ -224,11 +254,11 @@ class Repository implements IRepository
     public function patchByConditions(IModel $model, array $selectedAttributes, array $conditions): int
     {
         $columns = $this->dbMapper->map($model, $selectedAttributes);
-        $conditions = $this->dbMapper->mapConditionsColumnNames($conditions);
+        $conditionsColumns = $this->dbMapper->mapConditionsColumnNames($conditions);
 
         $model->resetDirtyAttributes($selectedAttributes);
 
-        return $this->dbStorage->update($columns, $conditions);
+        return $this->dbStorage->update($columns, $conditionsColumns);
     }
 
 

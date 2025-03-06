@@ -145,6 +145,26 @@ interface IDBStorage
     public function deleteById (int $id, bool $permanentDelete = false) : int;
 
     /**
+     * @param array $primaryKeyColumns - array of primary keys, if not all provided, the delete will fail
+     * @param bool $permanentDelete
+     * @return int - number of affected rows
+     */
+    public function deleteByPrimaryKey(array $primaryKeyColumns, bool $permanentDelete = false) : int;
+
+    /**
+     * @param array $conditions
+     *  Format1: [  ['column', 'operator', 'value'], ['column', 'operator', 'value',] ]
+     *  Short format for a single cirterium ['column', 'optional operator', 'value', ]
+     *  Available operators '=' - default - no need to use, '<=', '>=', 'like', 'like%', '%like%', '%like', 'null', 'not null', 'in', 'between'
+     *  'date=', 'date>', 'date>=', 'date<=', 'date<', 'in'
+     * @param int $limit
+     * @param bool $permanentDelete
+     *
+     * @return int - number of affected rows
+     */
+    public function deleteByConditions(array $conditions, int $limit = 100, bool $permanentDelete = false) : int;
+
+    /**
      * @param array $columnsNames
      * @param array $conditions
      * Available operators '=' - default - no need to use, '<=', '>=', 'like', 'like%', '%like%', '%like', 'null', 'not null', 'in', 'between'
