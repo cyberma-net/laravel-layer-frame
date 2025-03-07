@@ -1,15 +1,18 @@
 # Layer Frame for Laravel
-### Layerd structure for your Laravel projects
+### Layered structure for your big Laravel projects
 
 ## Motivation
 Laravel's native Active Record approach to models and database provides an easy to use environment
-for handling data and database. However, the models are big, they do many different tasks
+for handling data and database. However, the models are big, they handle many different tasks
 and therefore don't follow Single Responsibility Principle (SRP). Models tend to get huge over time.
 
 On top of that, active record creates a very tight coupling between the code and the DB structure.
 
 Layer Frame brings a better code structure despite the need of more objects and classes.
 Especially bigger projects can benefit from better testability and separation of different tasks.
+
+Using Repositories and DBMappers may seem like overkill at the beginning, but it will quickly 
+demonstrates its usefulness during refactors and code extending.
 
 ### Main principles
 
@@ -26,6 +29,9 @@ Controllers validate input data and maps them into the internal represenation, i
 Then, controllers call a service. After service returns data, controllers
 form required data format for the api and ships the data to the API.
 
+Layer Frame provides classes such as Paginator and Searcher to make pagination and searching queries more 
+streamlined.
+
 ### Input Mappers
 Contain validation rules for incoming data
 
@@ -35,7 +41,9 @@ If there are special cases for data validation, you can create your own inputPar
 
 
 ### Services
-Services handle business logic
+Services handle business logic. This layer is often overlooked in the Laravel projects. It is not clear where
+to put complex business logic. Some tutorials extend the models making them even bigger and more coupled with everything.
+Other approach may be to put business logic into Controllers, which again expands greatly their original purpose.
 
 ### Repositories
 
@@ -88,4 +96,4 @@ All classes in this folder inherit ModelMap containing all the important functio
 All exceptions should be listed in the Exception.csv with its model code and a number. The list of exceptions
 helps finding the place, where the exception was thrown.
 
-Last update: 27th Nov 2023.
+Last update: 7th March 2025.
