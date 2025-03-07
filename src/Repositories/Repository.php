@@ -183,13 +183,13 @@ class Repository implements IRepository
     }
 
     /**
-     * @param array $primaryKeyAttributes
+     * @param array $primaryKeyAttributes attributes with values ['attrName' => value]
      * @param bool $permanentDelete
-     * @return int -number of affected rows
+     * @return int - number of affected rows
      */
     public function deleteByPrimaryKey(array $primaryKeyAttributes, bool $permanentDelete = false): int
     {
-        $primaryColumns = $this->dbMapper->mapAttributesNamesToColumns($primaryKeyAttributes);
+        $primaryColumns = $this->dbMapper->mapAttributesToColumns($primaryKeyAttributes);
 
         return $this->dbStorage->deleteByPrimaryKey($primaryColumns, $permanentDelete);
     }
