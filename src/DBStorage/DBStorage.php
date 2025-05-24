@@ -161,7 +161,7 @@ class DBStorage implements IDBStorage
                 $query->where($namespacedColumn, 'like',  '%' . $value); break;
             case 'in' :
                 $query->whereIn($namespacedColumn, $value); break;
-            case 'notIn' :
+            case 'notin' :
                 $query->whereNotIn($namespacedColumn, $value); break;
             case 'between' :
                 $query->whereBetween($namespacedColumn, $value); break;

@@ -13,17 +13,10 @@ use Illuminate\Support\Collection;
 
 class Repository implements IRepository
 {
-    /**
-     * @var IDBStorage
-     */
     protected IDBStorage $dbStorage;
-    /**
-     * @var IDBMapper
-     */
+
     protected IDBMapper $dbMapper;
-    /**
-     * @var IModelMap
-     */
+
     protected IModelMap $modelMap;
 
 

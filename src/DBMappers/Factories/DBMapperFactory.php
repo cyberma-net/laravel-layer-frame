@@ -11,13 +11,8 @@ use Cyberma\LayerFrame\DBMappers\DBMapper;
 
 class DBMapperFactory implements IDBMapperFactory
 {
-    /**
-     * @var IModelMap
-     */
     private IModelMap $modelMap;
-    /**
-     * @var IModelFactory
-     */
+
     private IModelFactory $modelFactory;
 
     /**
@@ -33,9 +28,6 @@ class DBMapperFactory implements IDBMapperFactory
         $this->modelFactory = $modelFactory;
     }
 
-    /**
-     * @return DBMapper
-     */
     public function createDBMapper(): DBMapper
     {
         return new DBMapper($this->modelMap, $this->modelFactory);
