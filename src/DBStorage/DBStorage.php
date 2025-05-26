@@ -217,7 +217,6 @@ class DBStorage implements IDBStorage
         return $query->skip(($pagination['page'] - 1) * $pagination['perPage'])->take($pagination['perPage']);
     }
 
-
     /**
      * @param Builder $query
      * @param array $orderBy
@@ -569,7 +568,6 @@ class DBStorage implements IDBStorage
             $this->processSQLerrors($e);
         }
     }
-
 
     /**
      * @param array $conditions

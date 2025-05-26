@@ -4,17 +4,14 @@ namespace  Cyberma\LayerFrame\Models\Traits;
 
 trait JsonData
 {
-
     protected $_data = [];
-
 
     /**
      * @param string|null $key
-     * @return array|null
+     * @return mixed
      */
     public function getData (string $key = null)
     {
-
         if(is_null($key))
             return $this->_data;
 
