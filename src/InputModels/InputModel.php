@@ -120,7 +120,7 @@ class InputModel implements IInputModel
      * @param MessageBag|null $errors
      * @throws Exception
      */
-    public function throwException (string $validatedSet, MessageBag $errors = null)
+    public function throwException (string $validatedSet, ?MessageBag $errors = null)
     {
         throw new Exception ($this->getErrorMessage($validatedSet), $this->getErrorCode($validatedSet), is_null($errors) ? [] : $errors->getMessages());
     }

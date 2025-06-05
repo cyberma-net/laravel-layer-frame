@@ -17,7 +17,7 @@ class CodeException extends Exception
      * @param null $data
      * @param Throwable|null $previous
      */
-    public function __construct(string $message = '', int|string $code = 0, $data = null, int $httpCode = 500, Throwable $previous = null)
+    public function __construct(string $message = '', int|string $code = 0, $data = null, int $httpCode = 500, ?Throwable $previous = null)
     {
 
         if ($data instanceof \Exception) {

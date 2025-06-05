@@ -71,7 +71,7 @@ class ModelMap implements IModelMap
      * @param string|null $collectionKeyParameter
      * @return IModel
      */
-    public function doCustomDemapping(IModel $model, \stdClass $row, string $collectionKeyParameter = null) : IModel
+    public function doCustomDemapping(IModel $model, \stdClass $row, ?string $collectionKeyParameter = null) : IModel
     {
         return $model;
     }

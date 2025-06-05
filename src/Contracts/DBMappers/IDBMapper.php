@@ -20,7 +20,7 @@ interface IDBMapper
      * @param string|null $collectionKeyParameter
      * @return Collection
      */
-    public function demap (Collection $rows, string $collectionKeyParameter = null) : Collection;
+    public function demap (Collection $rows, ?string $collectionKeyParameter = null) : Collection;
 
     /**
      * @param array $attributes

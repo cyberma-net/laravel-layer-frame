@@ -108,7 +108,7 @@ class Repository implements IRepository
      * @return Collection
      */
     public function searchInAttributes(string $keywords, array $searchedAttributes, array $attributes = [],
-                                       array  $pagination = [], array $orderBy = [], string $collectionKeyParameter = null): Collection
+                                       array  $pagination = [], array $orderBy = [], ?string $collectionKeyParameter = null): Collection
     {
         $columnNames = $this->dbMapper->mapAttributesNamesToColumns($attributes);
         $searchedColumns = $this->dbMapper->mapAttributesNamesToColumns($searchedAttributes, [], false);

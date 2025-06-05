@@ -21,7 +21,7 @@ interface IModelMap
      * @param string|null $collectionKeyParameter
      * @return IModel
      */
-    public function doCustomDemapping(IModel $model, \stdClass $row, string $collectionKeyParameter = null) : IModel;
+    public function doCustomDemapping(IModel $model, \stdClass $row, ?string $collectionKeyParameter = null) : IModel;
 
     /**
      * @param string $code

@@ -36,7 +36,7 @@ interface IInputModel
      * @param MessageBag|null $errors
      * @return mixed
      */
-    public function throwException (string $validatedSet, MessageBag $errors = null);
+    public function throwException (string $validatedSet, ?MessageBag $errors = null);
 
     /**
      * @param string $validatedSet

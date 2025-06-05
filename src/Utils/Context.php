@@ -24,7 +24,7 @@ class Context
      * @param string|null $key
      * @return mixed
      */
-    public function get (string $key = null)
+    public function get (?string $key = null)
     {
         return !empty($this->data[$key]) ? $this->data[$key] : null;
     }

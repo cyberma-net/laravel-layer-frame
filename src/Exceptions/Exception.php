@@ -20,7 +20,7 @@ class Exception extends LaravelException
      * @param null $data
      * @param Throwable|null $previous
      */
-    public function __construct(string $message = '', string|int $code = 0, $data = null, int $httpCode = 200, Throwable $previous = null)
+    public function __construct(string $message = '', string|int $code = 0, $data = null, int $httpCode = 200, ?Throwable $previous = null)
     {
         $this->lfCode = (string)$code;
 
