@@ -19,15 +19,19 @@ class DBStorage implements IDBStorage
 {
     use DBErrors;
 
-    /**
-     * @var IModelMap
-     */
     protected IModelMap $modelMap;
+
+    protected $customTableFunction = null;
 
 
     public function __construct(IModelMap $modelMap)
     {
         $this->modelMap = $modelMap;
+    }
+
+    public function useTable(callable $customTableFunction): void
+    {
+        $this->customTableFunction = $customTableFunction;
     }
 
     /**
@@ -40,9 +44,14 @@ class DBStorage implements IDBStorage
             $columnsNames = $this->modelMap->getAllColumns();
         }
 
-        $query = $columnsNames === [null]
-            ? DB::table($this->modelMap->getTable())
-            : DB::table($this->modelMap->getTable())->select($columnsNames);
+        if(isset($this->customTableFunction)) {
+            $query = ($this->customTableFunction)($columnsNames);
+        }
+        else {
+            $query = $columnsNames === [null]
+                ? DB::table($this->modelMap->getTable())
+                : DB::table($this->modelMap->getTable())->select($columnsNames);
+        }
 
         if ($this->modelMap->hasSoftDeletes()) {
             $query->whereNull($this->modelMap->getTable() . '.deleted_at');

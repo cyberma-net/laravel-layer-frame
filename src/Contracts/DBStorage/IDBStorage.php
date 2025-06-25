@@ -12,6 +12,12 @@ use stdClass;
 interface IDBStorage
 {
     /**
+     * @param callable $customTableFunction
+     * @return void
+     */
+    public function useTable(callable $customTableFunction): void;
+
+    /**
      * @param array $columnsNames
      * @return Builder
      */
