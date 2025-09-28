@@ -35,7 +35,7 @@ class ApiMapper implements IApiMapper
             //if attribute is numeric, that means, that it is not associative ('attrName' => 'newAttrName'), just attributes listed in simple array to avoid repeating of the attr name
 
             if(array_key_exists($attr, $this->customMappers)) {
-                $outAttributes[$apiName] = ($this->customMappers[$attr])($attributes[$attr] ?? null);
+                $outAttributes[$apiName] = ($this->customMappers[$attr])($model);
             }
             elseif(is_numeric($attr)) {
                 $outAttributes[$apiName] = array_key_exists($apiName, $attributes) ? $attributes[$apiName] : null;
