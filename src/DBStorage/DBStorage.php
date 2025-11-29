@@ -383,6 +383,11 @@ class DBStorage implements IDBStorage
         return $query->get();
     }
 
+    protected function hasPrimaryKeySet(array $columns, string $primaryKey): bool
+    {
+        return isset($columns[$primaryKey]) && !empty($columns[$primaryKey]);
+    }
+
     /**
      * @param array $columns
      * @return array
@@ -405,9 +410,9 @@ class DBStorage implements IDBStorage
         $table = $this->modelMap->getTable();
 
         //If Primary Key is missing → INSERT NEW
-        if (!isset($columns[$primaryKey]) || empty($columns[$primaryKey])) {
+        if (!$this->hasPrimaryKeySet($columns, $primaryKey)) {
             $columns[$primaryKey] = $this->insert($columns, $table);
-
+            
             return $columns;
         }
 
