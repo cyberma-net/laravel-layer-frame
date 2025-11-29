@@ -26,7 +26,7 @@ class Context
      */
     public function get (?string $key = null)
     {
-        return !empty($this->data[$key]) ? $this->data[$key] : null;
+        return isset($this->data[$key]) ? $this->data[$key] : null;
     }
 
     /**

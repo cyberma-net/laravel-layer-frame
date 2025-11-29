@@ -168,7 +168,7 @@ interface IDBStorage
      *
      * @return int - number of affected rows
      */
-    public function deleteByConditions(array $conditions, int $limit = 100, bool $permanentDelete = false) : int;
+    public function deleteByConditions(array $conditions, int $limit = PHP_INT_MAX, bool $permanentDelete = false) : int;
 
     /**
      * @param array $columnsNames
@@ -179,16 +179,32 @@ interface IDBStorage
      * @return Collection
      */
     public function getByConditions(array $columnsNames = [],
-                                  array $conditions = [],
-                                  array $pagination = ['page' => 1, 'perPage' => 20],
-                                  array $orderBy = ['attribute' => 'id', 'order' => 'asc']): Collection;
+                array $conditions = [/*'column' => 'value', 'column' => 'value',*/],
+                array $pagination = [/*'page' => 1, 'perPage' => 20*/],
+                array $orderBy = [/*'column' => 'id', 'order' => 'desc'*/]): Collection;
 
     /**
      * @param array $columnsNames
      * @param array $conditions
+     *  Format1: [  ['column', 'operator', 'value'], ['column', 'operator', 'value',] ]
+     *  Short format for a single cirterium ['column', 'optional operator', 'value', ]
+     *  Available operators '=' - default - no need to use, '<=', '>=', 'like', 'like%', '%like%', '%like', 'null', 'not null', 'in', 'between'
+     *  'date=', 'date>', 'date>=', 'date<=', 'date<', 'in'
      * @return int
      */
     public function countByConditions(array $conditions = []): int;
+
+    /**
+     * @param array $condition
+     * @return array
+     */
+    public function normalizeSingleCondition(array $condition): array;
+
+    /**
+     * @param array $conditions
+     * @return array|array[]
+     */
+    public function normalizeConditions(array $conditions): array;
 
 
     public function beginTransaction();
@@ -198,4 +214,5 @@ interface IDBStorage
 
 
     public function rollbackTransaction();
+
 }

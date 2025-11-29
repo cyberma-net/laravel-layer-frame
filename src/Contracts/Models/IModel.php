@@ -2,24 +2,36 @@
 
 namespace Cyberma\LayerFrame\Contracts\Models;
 
+use Cyberma\LayerFrame\Exceptions\CodeException;
+
 interface IModel
 {
+    /**
+     * Dirty tracking on
+     *
+     * @param string $name
+     * @param mixed $value
+     * @return void
+     * @throws CodeException
+     */
+    public function set(string $name, mixed $value): void;
+
     /**
      * All attributes will be marked as changed (dirty) by default
      *
      * @param array $attributes
-     * @param array $ignoreAttributes
+     * @param array $ignore
      */
-    public function setAttributes(array $attributes, array $ignoreAttributes = []): void;
+    public function setMany(array $attributes, array $ignore = []): void;
 
     /**
      * Fill does not assign original attributes, should be used for DB read only
      * No attribute will be marked as dirty
      * LS columns are expected to come as arrays
      * @param array $attributes
-     * @param array $ignoreAttributes
+     * @param array $ignore
      */
-    public function fill(array $attributes, array $ignoreAttributes = []): void;
+    public function hydrate(array $attributes, array $ignore = []): void;
 
     /**
      * @param string $name
@@ -27,22 +39,24 @@ interface IModel
     public function resetAttributeToOriginal(string $name);
 
     /**
-     * @param $key
+     * @param string $name
      * @return mixed
      * @throws \Cyberma\LayerFrame\Exceptions\CodeException
      */
-    public function getAttribute(string $name);
+    public function get(string $name);
 
     /**
-     * @param string $attr
+     * @param string $name
      * @return bool
      */
-    public function hasAttribute(string $attr): bool;
+    public function hasAttribute(string $name): bool;
 
     /**
+     * @param array $names
+     * @param array $except
      * @return array
      */
-    public function toArray(array $whichAttributes = [], array $except = []): array;
+    public function toArray(array $names = [], array $except = []) : array;
 
     /**
      * @return array
@@ -50,36 +64,36 @@ interface IModel
     public function getAllNotNullAttributes(): array;
 
     /**
-     * @return mixed
+     * @param bool $force
+     * @return void
      */
-    public function makeAllAttributesDirty();
-
+    public function makeAllAttributesDirty(bool $force = false): void;
 
     /**
-     * @param string[] $attributes - [] means all
-     * @return mixed
+     * @param string[] $names - [] means all
+     * @return void
      */
-    public function resetDirtyAttributes(array $attributes = []);
+    public function resetDirty(array $names = []): void;
 
     /**
-     * @param string|array $attribute
-     * @param mixed $oldValue
+     * @param string|array $names
+     * @param array $oldValues - ['attributeName' => 'value']
+     * @param bool $force
      */
-    public function makeAttributeDirty(string|array $attributes, $oldValue = null) : void;
+    public function markDirty(string|array $names, array $oldValues = [], bool $force = false) : void;
 
     /**
-     * @param array $whichAttributes
+     * @param array $names
      * @return array
      */
-    public function getAttributes(array $whichAttributes = []) : array;
-
+    public function attributes(array $names = []) : array;
 
     /**
-     * @param array $selectedAttributes
+     * @param array $selectedNames
      * @param array $except
      * @return array
      */
-    public function getChangedAttributes (array $selectedAttributes = [], array $except = []): array;
+    public function getDirty (array $selectedNames = [], array $except = []): array;
 
     /**
      * @param string $name
@@ -95,8 +109,8 @@ interface IModel
     public function __set(string $name, $value);
 
     /**
-     * @param string $property
+     * @param string $name
      * @return bool
      */
-    public function __isset(string $property) : bool;
+    public function __isset(string $name) : bool;
 }

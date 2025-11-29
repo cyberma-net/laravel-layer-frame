@@ -41,6 +41,6 @@ class HeaderParser
      */
     protected function getValidator (array $data, array $rules, array $messages = []) : Validator
     {
-        return empty($messages) ? ValidatorFacade::make($data, $rules) : ValidatorFacade::make($data, $rules, $messages);
+        return ValidatorFacade::make($data, $rules, $messages);
     }
 }

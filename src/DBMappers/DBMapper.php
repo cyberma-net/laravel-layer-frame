@@ -34,19 +34,28 @@ class DBMapper implements IDBMapper
     }
 
     /**
+     *  Returns DB column names for given attributes (or all if empty / '*'),
+     *  always including primary key columns.
+     *
      * @param array $attributes
      * @return array
      */
     public function getColumnNames(array $attributes = []): array
     {
-        if ($attributes === [] || in_array('*', $attributes)) {   //we don't want to use SELECT *, rather list all columns - security reasons/best practices
-            $columns = $this->mapAttributesNamesToColumns($this->modelMap->getAttributes($attributes));
+         // We don't want to use SELECT *, rather list all columns - security reasons/best practices
+        // If no attributes or wildcard → let ModelMap decide which attributes are “visible”
+        if ($attributes === [] || in_array('*', $attributes, true)) {
+            $attrList = $this->modelMap->getAttributeNames($attributes); // attribute names
+            $columns  = $this->mapAttributesNamesToColumns($attrList);
+        }
+        else {
+            $columns = $this->mapAttributesNamesToColumns($attributes);
         }
 
-        // primary key is always present in the query
-        foreach($this->modelMap->getPrimaryKeyColumns() as $key) {
-            if(!in_array($key, $columns)) {
-                $columns[] = $key;
+        // Ensure PK columns are always selected
+        foreach ($this->modelMap->getPrimaryKeyColumns() as $pkColumn) {
+            if ($pkColumn !== null && !in_array($pkColumn, $columns, true)) {
+                $columns[] = $pkColumn;
             }
         }
 
@@ -98,6 +107,7 @@ class DBMapper implements IDBMapper
             $columns = $this->applyColumnNamesAliases($columns);
         }
 
+        // We only need DB column names list here
         return array_values($columns);
     }
 
@@ -107,7 +117,7 @@ class DBMapper implements IDBMapper
      */
     protected function applyColumnNamesAliases (array $columnNames) : array
     {
-        $aliasMap = $this->modelMap->getColumnAliasMap();
+        $aliasMap = $this->modelMap->getColumnAliasMap(); // ['column_name' => 'users.column_name as column_name']
 
         foreach ($aliasMap as $attr => $alias) {
             $columnIndex = array_search($attr, $columnNames);
@@ -125,17 +135,31 @@ class DBMapper implements IDBMapper
      * @param array $specificJsons
      * @return array
      */
-    public function encodeJsons (array $columns, array $specificJsons = []) : array
+    public function encodeJsons(array $columns, array $specificJsons = []): array
     {
-        $jsonAttributes = empty($specificJsons) ? $this->modelMap->getJsons() : $specificJsons;
+        $jsonColumns = empty($specificJsons)
+            ? $this->modelMap->getJsons()
+            : $specificJsons;
 
-        $forceJsonObjectOnAttributes = $this->modelMap->getJsonsForceObject();  //which columns shall have {} instead of [] in the json
+        $forceJsonObjectOnAttributes = $this->modelMap->getJsonsForceObject();
 
-        foreach($jsonAttributes as $attr) {
-            if (isset($columns[$attr])) {
-                $columns[$attr] = in_array($attr, $forceJsonObjectOnAttributes)
-                    ? json_encode($columns[$attr], JSON_FORCE_OBJECT)
-                    : str_replace('[]', '{}', json_encode($columns[$attr]));
+        foreach ($jsonColumns as $col) {
+            if (!array_key_exists($col, $columns)) {
+                continue;
+            }
+
+            $value = $columns[$col];
+
+            if (in_array($col, $forceJsonObjectOnAttributes, true)) {
+                $columns[$col] = json_encode($value, JSON_FORCE_OBJECT);
+            } else {
+                // Keep original behavior with minimal risk change:
+                // empty array -> {}, otherwise usual json_encode
+                $json = json_encode($value);
+                if ($json === '[]') {
+                    $json = '{}';
+                }
+                $columns[$col] = $json;
             }
         }
 
@@ -146,11 +170,26 @@ class DBMapper implements IDBMapper
      * @param \stdClass $columns
      * @return \stdClass
      */
-    public function decodeJsons (\stdClass &$columns) : \stdClass
+    public function decodeJsons(\stdClass &$columns): \stdClass
     {
-        foreach($this->modelMap->getJsons() as $attr) {
-            if (property_exists ($columns, $attr) && !is_array($columns->$attr))
-                $columns->$attr = json_decode($columns->$attr, true);
+        foreach ($this->modelMap->getJsons() as $col) {
+            if (!property_exists($columns, $col)) {
+                continue;
+            }
+
+            $value = $columns->$col;
+
+            // Only decode JSON-like strings; avoid touching non-JSON scalars
+            if (is_string($value) && $value !== '') {
+                $first = $value[0];
+                if ($first === '{' || $first === '[') {
+                    $decoded = json_decode($value, true);
+                    // If decode fails, keep original (avoid silent data loss)
+                    if (json_last_error() === JSON_ERROR_NONE) {
+                        $columns->$col = $decoded;
+                    }
+                }
+            }
         }
 
         return $columns;
@@ -160,19 +199,17 @@ class DBMapper implements IDBMapper
      * @param \stdClass|null $row
      * @return IModel|null
      */
-    public function demapSingle (?\stdClass $row) : ?IModel
+    public function demapSingle(?\stdClass $row): ?IModel
     {
-        if(empty($row)) return null;
-
-        if(!is_array($row)){
-            $rows = [$row];
+        if ($row === null) {
+            return null;
         }
 
-        $model = $this->demap($rows);
+        $collection = $this->demap([$row]);
 
-        return is_null($model) || $model->count() == 0
+        return $collection->isEmpty()
             ? null
-            : $model->pop();
+            : $collection->first();
     }
 
     /**
@@ -193,11 +230,11 @@ class DBMapper implements IDBMapper
             $attributes = $this->mapColumnsToAttributes($row);
             $newModel = $this->modelFactory->createModel();  /** @var IModel $newModel */
 
-            $newModel->fill($attributes);  //don't mark attributes as dirty
+            $newModel->hydrate($attributes);  //don't mark attributes as dirty
 
             $newModel = $this->modelMap->doCustomDemapping($newModel, $row, $collectionKeyParameter);
 
-            if(is_null($collectionKeyParameter)) {
+            if($collectionKeyParameter === null) {
                 $models->push($newModel);
             }
             else {
@@ -246,6 +283,14 @@ class DBMapper implements IDBMapper
 
         $modelMap = $this->modelMap->getFullAttributeMap();
         foreach($conditions as $key => $criterium) {
+            if (!array_key_exists(0, $criterium)) {
+                throw new CodeException(
+                    'Invalid condition format; expected [attribute, value] or [attribute, operator, value].',
+                    'lf2100',
+                    ['criterium' => $criterium]
+                );
+            }
+
             if(!array_key_exists($criterium[0], $modelMap)) {
                 throw new CodeException('Get by $conditions does not have a correct attribute. Attribute does not exist.', 'lf2101',
                     ['modelMap' => $modelMap, 'attribute' => $criterium[0]]);
@@ -264,7 +309,7 @@ class DBMapper implements IDBMapper
      */
     public function map(IModel $model, array $attributes = [], array $except = []): array
     {
-        $columns = $this->mapAttributesToColumns($model->getChangedAttributes($attributes, $except));
+        $columns = $this->mapAttributesToColumns($model->getDirty($attributes, $except));
 
         // add primary key, if it is not null in the model
         foreach($this->modelMap->getPrimaryKey() as $key) {
@@ -285,7 +330,7 @@ class DBMapper implements IDBMapper
     public function mapAttributesToColumns(array $attributesWithValues = []): array
     {
         $primaryKey = $this->modelMap->getPrimaryKey();
-        $attributesMap =  $this->modelMap->getAttributeMap(array_keys($attributesWithValues));
+        $attributesMap = $this->modelMap->getAttributeMap(array_keys($attributesWithValues));
 
         $columns = [];
         foreach ($attributesWithValues as $attr => $value) {
@@ -300,10 +345,13 @@ class DBMapper implements IDBMapper
             }
         }
 
-        //if primary key is null, then unset it - necessary for insert
-        foreach($primaryKey as $key) {
-            if(!isset($attributesWithValues[$key]) && array_key_exists($key, $columns)) {
-                unset ($columns[$key]);
+        // if primary key attribute is null or missing, unset corresponding column (for insert)
+        foreach ($primaryKey as $pkAttr) {
+            if (!isset($attributesWithValues[$pkAttr])) {
+                $columnName = $attributesMap[$pkAttr] ?? null;
+                if ($columnName !== null && array_key_exists($columnName, $columns)) {
+                    unset($columns[$columnName]);
+                }
             }
         }
 
@@ -317,7 +365,7 @@ class DBMapper implements IDBMapper
     public function mapOrderBy($orderBy = []): array
     {
         $mappedOrderBy = [];
-        if(array_key_exists('attribute', $orderBy)) {
+        if(is_array($orderBy) && array_key_exists('attribute', $orderBy)) {
             $mappedOrderBy['column'] = $this->mapAttributeNameToColumn($orderBy['attribute']);
             $mappedOrderBy['order'] = $orderBy['order'];
         }

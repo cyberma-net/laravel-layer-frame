@@ -29,7 +29,8 @@ class Repository implements IRepository
 
     /**
      * @param int $id
-     * @return IModel
+     * @param array $attributes
+     * @return IModel|null
      */
     public function getById(int $id, array $attributes = []): ?IModel
     {
@@ -90,7 +91,7 @@ class Repository implements IRepository
 
         $dbRows = $this->dbStorage->getByConditions($columnNames, $conditionsColumns, ['perPage' => 1]);
 
-        if(empty($dbRows) || $dbRows->isEmpty()) {
+        if($dbRows->isEmpty()) {
             return null;
         }
 
@@ -113,8 +114,9 @@ class Repository implements IRepository
         $columnNames = $this->dbMapper->mapAttributesNamesToColumns($attributes);
         $searchedColumns = $this->dbMapper->mapAttributesNamesToColumns($searchedAttributes, [], false);
         $keywordsAsArray = explode(' ', $keywords);
+        $mappedOrderBy = $this->dbMapper->mapOrderBy($orderBy);
 
-        $dbRows = $this->dbStorage->searchInColumns($keywordsAsArray, $searchedColumns, $columnNames, $pagination, $orderBy);
+        $dbRows = $this->dbStorage->searchInColumns($keywordsAsArray, $searchedColumns, $columnNames, $pagination, $mappedOrderBy);
 
         return $this->dbMapper->demap($dbRows, $collectionKeyParameter);
     }
@@ -150,7 +152,7 @@ class Repository implements IRepository
             $model->{$key} = $columns[$this->dbMapper->mapAttributeNameToColumn($key)];
         }
 
-        $model->resetDirtyAttributes();
+        $model->resetDirty();
 
         return $model;
     }
@@ -182,6 +184,12 @@ class Repository implements IRepository
      */
     public function deleteByPrimaryKey(array $primaryKeyAttributes, bool $permanentDelete = false): int
     {
+        foreach ($this->modelMap->getPrimaryKey() as $key) {
+            if (!isset($primaryKeyAttributes[$key])) {
+                throw new CodeException("Missing Primary Key");
+            }
+        }
+
         $primaryColumns = $this->dbMapper->mapAttributesToColumns($primaryKeyAttributes);
 
         return $this->dbStorage->deleteByPrimaryKey($primaryColumns, $permanentDelete);
@@ -221,7 +229,7 @@ class Repository implements IRepository
                 $selectedAttributes[] = $key;
             }
 
-            if (empty($model->$key)) {
+            if (!isset($model->$key)) {
                 throw new CodeException(_('The model you would like to patch is missing the primary key, or the key is empty.'), 'lf2107',                    [
                         'model' => get_class($model),
                         'selectedAttributes' => $selectedAttributes
@@ -231,7 +239,7 @@ class Repository implements IRepository
 
         $columns = $this->dbMapper->map($model, $selectedAttributes);
 
-        $model->resetDirtyAttributes($selectedAttributes);
+        $model->resetDirty($selectedAttributes);
 
         return $this->dbStorage->patchById($columns);
     }
@@ -249,7 +257,7 @@ class Repository implements IRepository
         $columns = $this->dbMapper->map($model, $selectedAttributes);
         $conditionsColumns = $this->dbMapper->mapConditionsColumnNames($conditions);
 
-        $model->resetDirtyAttributes($selectedAttributes);
+        $model->resetDirty($selectedAttributes);
 
         return $this->dbStorage->update($columns, $conditionsColumns);
     }

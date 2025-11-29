@@ -27,7 +27,6 @@ trait JsonData
      */
     public function setData (string $key, $item)
     {
-
         if( !array_key_exists('data', $this->originalAttributes)) {  //set originalAttribute only once and if  it has been changed
             $this->originalAttributes['data'] = $this->_data;   //marks attribute as dirty (changed)
         }
@@ -40,7 +39,7 @@ trait JsonData
     protected function deleteDataItem(string $key)
     {
         if(isset($this->_data[$key])) {
-            $this->saveOriginalAttribute('data');
+            $this->markDirty('data');
             unset($this->_data[$key]);
         }
     }

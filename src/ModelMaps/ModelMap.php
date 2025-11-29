@@ -4,6 +4,7 @@ namespace Cyberma\LayerFrame\ModelMaps;
 
 use Cyberma\LayerFrame\Contracts\ModelMaps\IModelMap;
 use Cyberma\LayerFrame\Contracts\Models\IModel;
+use Cyberma\LayerFrame\Exceptions\CodeException;
 use Illuminate\Support\Collection;
 
 
@@ -27,7 +28,7 @@ class ModelMap implements IModelMap
 
     const JSON_COLUMNS_FORCE_OBJECT = [];    //force json_encode to use {}, instead of simple array [].
 
-    const HIDEN_COLUMNS = [];    //will not be retrieved from db. Typically deleted_at
+    const HIDDEN_COLUMNS = [];    //will not be retrieved from db. Typically deleted_at
 
     const SEARCHABLE_ATTRIBUTES = [];   //simple list of attributes that can be searched using dbMapper->search
 
@@ -43,9 +44,9 @@ class ModelMap implements IModelMap
      * @param array $except
      * @return array
      */
-    public function exportModel(IModel $model, array $whichAttributes = [], array $except = []): array
+    public function exportDirtyAttributes(IModel $model, array $whichAttributes = [], array $except = []): array
     {
-        return $model->getChangedAttributes($whichAttributes, $except);
+        return $model->getDirty($whichAttributes, $except);
     }
 
     /**
@@ -85,7 +86,7 @@ class ModelMap implements IModelMap
      */
     public function demapAttribute(string $attr, $value): array
     {
-        return $value instanceof IModel ? $value->toArray() : [];
+        return $value instanceof IModel ? $value->toArray() : $value;
     }
 
     /**
@@ -103,7 +104,7 @@ class ModelMap implements IModelMap
     {
         $mandatory = static::MANDATORY_ATTRIBUTES;
         foreach(static::PRIMARY_KEY as $key) {
-            if(!array_key_exists($key, $mandatory)) {
+            if(!in_array($key, $mandatory)) {
                 $mandatory[] = $key;
             }
         }
@@ -150,16 +151,20 @@ class ModelMap implements IModelMap
      */
     public function getAttributeMap(array $attributes = []) : array
     {
-        if($attributes === []) {
-            return array_filter(static::ATTRIBUTES_MAP, fn($value) => !in_array($value, static::HIDEN_COLUMNS));
-        }
-        elseif (in_array('*', $attributes)) {
+        // Case 1: no specific attributes → return all visible (non-hidden)
+        if ($attributes === []) {
             return array_filter(
                 static::ATTRIBUTES_MAP,
-                fn($value, $key) => !in_array($value, static::HIDEN_COLUMNS) || in_array($key, $attributes),
+                fn($column) => !in_array($column, static::HIDDEN_COLUMNS, true)
+            );
+        }
+
+        if (in_array('*', $attributes)) {
+            return array_filter(
+                static::ATTRIBUTES_MAP,
+                fn($value, $key) => !in_array($value, static::HIDDEN_COLUMNS) || in_array($key, $attributes),
                 ARRAY_FILTER_USE_BOTH
             );
-
         }
 
         return array_filter(static::ATTRIBUTES_MAP, fn($key) => in_array($key, $attributes), ARRAY_FILTER_USE_KEY);
@@ -177,7 +182,7 @@ class ModelMap implements IModelMap
      * @param array $includeHiddenAttributes
      * @return array
      */
-    public function getAttributes(array $includeHiddenAttributes = []) : array
+    public function getAttributeNames(array $includeHiddenAttributes = []) : array
     {
         $allAttributes = array_keys(static::ATTRIBUTES_MAP);
         if($includeHiddenAttributes === []) {
@@ -189,7 +194,7 @@ class ModelMap implements IModelMap
             return $allAttributes;
         }
 
-        return array_filter($allAttributes, fn($item) => !in_array($this->getColumnForAttribute($item), static::HIDEN_COLUMNS) || in_array($item, $includeHiddenAttributes));
+        return array_filter($allAttributes, fn($item) => !in_array($this->getColumnForAttribute($item), static::HIDDEN_COLUMNS) || in_array($item, $includeHiddenAttributes));
     }
 
     /**
@@ -197,9 +202,11 @@ class ModelMap implements IModelMap
      */
     public function getAllColumns(): array
     {
-        return array_diff(
-            array_values(static::ATTRIBUTES_MAP),
-            array_diff(static::HIDEN_COLUMNS)
+        return array_values(
+            array_filter(
+                static::ATTRIBUTES_MAP,
+                fn($column) => !in_array($column, static::HIDDEN_COLUMNS, true)
+            )
         );
     }
 
@@ -214,7 +221,7 @@ class ModelMap implements IModelMap
     /**
      * @return bool
      */
-    public function isPrimaryAutoIncerement(): bool
+    public function isPrimaryAutoIncrement(): bool
     {
         if(count(static::PRIMARY_KEY) > 1) {
             return false;
@@ -230,6 +237,10 @@ class ModelMap implements IModelMap
     {
         $primaryKeysColumns = [];
         foreach(static::PRIMARY_KEY as $key) {
+            if (!array_key_exists($key, static::ATTRIBUTES_MAP)) {
+                throw new CodeException("Primary key '$key' not found in ATTRIBUTES_MAP", 'lf2120');
+            }
+
             $primaryKeysColumns[] = array_key_exists($key, static::ATTRIBUTES_MAP)
                 ? static::ATTRIBUTES_MAP[$key]
                 : null;
@@ -251,7 +262,7 @@ class ModelMap implements IModelMap
      */
     public function getHiddenColumns () : array
     {
-        return static::HIDEN_COLUMNS;
+        return static::HIDDEN_COLUMNS;
     }
 
     /**
@@ -260,7 +271,9 @@ class ModelMap implements IModelMap
      */
     public function getAttributeForColumn(string $column)
     {
-        return array_search($column, static::ATTRIBUTES_MAP);
+        $result = array_search($column, static::ATTRIBUTES_MAP, true);
+
+        return $result === false ? null : $result;
     }
 
     /**

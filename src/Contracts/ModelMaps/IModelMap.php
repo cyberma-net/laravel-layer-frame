@@ -13,7 +13,7 @@ interface IModelMap
      * @param array $except
      * @return array
      */
-    public function exportModel(IModel $model, array $whichAttributes = [], array $except = []): array;
+    public function exportDirtyAttributes(IModel $model, array $whichAttributes = [], array $except = []): array;
 
     /**
      * @param Collection $models
@@ -78,7 +78,7 @@ interface IModelMap
     /**
      * @return array
      */
-    public function getAttributes(array $includeHiddenAttributes = []): array;
+    public function getAttributeNames(array $includeHiddenAttributes = []): array;
 
     /**
      * @return array
@@ -93,7 +93,7 @@ interface IModelMap
     /**
      * @return bool
      */
-    public function isPrimaryAutoIncerement(): bool;
+    public function isPrimaryAutoIncrement(): bool;
 
     /**
      * @return array
@@ -121,6 +121,11 @@ interface IModelMap
      * @return mixed
      */
     public function getColumnForAttribute(string $attribute);
+   
+    /**
+     * @return array
+     */
+    public function getMandatoryAttributes() : array;
 
     /**
      * @return bool

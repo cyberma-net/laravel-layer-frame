@@ -35,10 +35,10 @@ class Handler extends ExceptionHandler
      *
      * This is a great spot to send exceptions to Sentry, Bugsnag, etc.
      *
-     * @param Exception|\Throwable $e
+     * @param \Throwable $e
      * @return void
      */
-    public function report(Exception|\Throwable $e)
+    public function report(\Throwable $e)
     {
         parent::report($e);
     }
@@ -51,7 +51,7 @@ class Handler extends ExceptionHandler
      * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse|Response|\Illuminate\Routing\Redirector|\Symfony\Component\HttpFoundation\Response
      * @throws \Throwable
      */
-    public function render($request, Exception|\Throwable $e)
+    public function render($request, \Throwable $e)
     {
        if ($e instanceof CodeException) {
            return resolve('ExceptionHandler')->translateToResponse($e, $request->headers->get('content-type'));

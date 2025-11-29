@@ -54,10 +54,15 @@ class DBStorage implements IDBStorage
         }
 
         if ($this->modelMap->hasSoftDeletes()) {
-            $query->whereNull($this->modelMap->getTable() . '.deleted_at');
+            $query->whereNull($this->qualify('deleted_at'));
         }
 
         return $query;
+    }
+
+    protected function qualify(string $column): string
+    {
+        return $this->modelMap->getTable() . '.' . $column;
     }
 
     /**
@@ -109,6 +114,52 @@ class DBStorage implements IDBStorage
     }
 
     /**
+     * @param array $conditions
+     * @return array|array[]
+     */
+    public function normalizeConditions(array $conditions): array
+    {
+        // CASE A: Single condition format: ['col', 'value'] OR ['col', 'op', 'value']
+        if (!empty($conditions)
+            && isset($conditions[0])
+            && !is_array($conditions[0])
+        ) {
+            return [$this->normalizeSingleCondition($conditions)];
+        }
+
+        // CASE B: Multi-condition format: [ ['col', ...], ['col', ...] ]
+        foreach ($conditions as $condition) {
+            if (!is_array($condition)) {
+                throw new \InvalidArgumentException("Invalid condition format.");
+            }
+        }
+
+        return array_map(
+            fn($c) => $this->normalizeSingleCondition($c),
+            $conditions
+        );
+    }
+
+    /**
+     * @param array $condition
+     * @return array
+     */
+    public function normalizeSingleCondition(array $condition): array
+    {
+        // ['column', 'value'] → turn into ['column', '=', 'value']
+        if (count($condition) === 2) {
+            return [$condition[0], '=', $condition[1]];
+        }
+
+        // assume correct: ['column', 'operator', 'value']
+        if (count($condition) === 3) {
+            return $condition;
+        }
+
+        throw new \InvalidArgumentException("Invalid condition format.");
+    }
+
+    /**
      * @param array $pagination
      * @return array
      */
@@ -132,17 +183,10 @@ class DBStorage implements IDBStorage
     public function queryByConditions(array $conditions, array $columnNames = []) : Builder
     {
         $query = $this->table($columnNames);
+        $normalized = $this->normalizeConditions($conditions);
 
-        if(count($conditions) > 0 && is_string(array_keys($conditions)[0])) {
-            $incomingConditions = $conditions;
-            $conditions = [];
-            $conditions[] = $incomingConditions;
-        }
-
-        foreach($conditions as $criterium) {
-            $operator = count($criterium) === 3 ? $criterium[1] : '=';
-            $value = count($criterium) === 3 ? $criterium[2] : $criterium[1] ;
-            $query = $this->prepareQueryWhere($query, $criterium[0], $value, $operator);
+        foreach($normalized as [$column, $operator, $value]) {
+            $this->prepareQueryWhere($query, $column, $value, $operator);
         }
 
         return $query;
@@ -157,42 +201,78 @@ class DBStorage implements IDBStorage
      */
     public function prepareQueryWhere(Builder &$query, string $column, $value, string $operator = '=') : Builder
     {
-        $namespacedColumn = $this->modelMap->getTable() . '.' . $column;
+        $column = $this->qualify($column);
+        // Normalize operator (case-insensitive, trim spaces)
+        $op = strtolower(trim($operator));
+        // Normalize synonyms
+        $op = match ($op) {
+            'notin' => 'not in',
+            'not_in' => 'not in',
+            'is null' => 'null',
+            'is not null' => 'not null',
+            default => $op,
+        };
 
-        switch (strtolower($operator)) {
-            case '%like%' :
-                $query->where($namespacedColumn, 'like',  '%' . $value . '%'); break;
-            case 'like' :
-                $query->where($namespacedColumn, 'like', $value); break;
-            case 'like%' :
-                $query->where($namespacedColumn, 'like',  $value . '%'); break;
-            case '%like' :
-                $query->where($namespacedColumn, 'like',  '%' . $value); break;
-            case 'in' :
-                $query->whereIn($namespacedColumn, $value); break;
-            case 'notin' :
-                $query->whereNotIn($namespacedColumn, $value); break;
-            case 'between' :
-                $query->whereBetween($namespacedColumn, $value); break;
-            case 'null' :
-                $query->whereNull($namespacedColumn); break;
-            case 'not null' :
-                $query->whereNotNull($namespacedColumn); break;
+        switch ($op) {
 
-            case 'date=' :
-            case 'date>' :
-            case 'date>=' :
-            case 'date<' :
-            case 'date<=' :
+            /* LIKE OPERATORS */
+            case '%like%':
+                return $query->where($column, 'like', '%' . $value . '%');
 
-                $operator = str_replace('date', '', $operator);
-                $query->where($namespacedColumn, $operator, $value);
-                break;
-            default :
-                $query->where($namespacedColumn, $operator, $value);
+            case 'like':
+                return $query->where($column, 'like', $value);
+
+            case 'like%':
+                return $query->where($column, 'like', $value . '%');
+
+            case '%like':
+                return $query->where($column, 'like', '%' . $value);
+
+
+            /* IN OPERATORS */
+            case 'in':
+                if (!is_array($value)) {
+                    throw new \InvalidArgumentException("IN operator requires array value.");
+                }
+                return $query->whereIn($column, $value);
+
+            case 'not in':
+                if (!is_array($value)) {
+                    throw new \InvalidArgumentException("NOT IN operator requires array value.");
+                }
+                return $query->whereNotIn($column, $value);
+
+
+            /* BETWEEN */
+            case 'between':
+                if (!is_array($value) || count($value) !== 2) {
+                    throw new \InvalidArgumentException("BETWEEN operator requires [min, max].");
+                }
+                return $query->whereBetween($column, $value);
+
+
+            /* NULL CHECKS */
+            case 'null':
+                return $query->whereNull($column);
+
+            case 'not null':
+                return $query->whereNotNull($column);
+
+
+            /* DATE OPERATORS */
+            case 'date=':
+            case 'date>':
+            case 'date>=':
+            case 'date<':
+            case 'date<=':
+                $pure = substr($op, 4); // remove "date"
+                return $query->where($column, $pure, $value);
+
+
+            /* DEFAULT SIMPLE OPERATOR (=, <, >, <=, >=, !=, etc.) */
+            default:
+                return $query->where($column, $op, $value);
         }
-
-        return $query;
     }
 
     /**
@@ -315,17 +395,21 @@ class DBStorage implements IDBStorage
             $columns = $this->addTimeStamps($columns);
         }
 
-        // add new DB entry or update existing one, if the primary key (ID) exists
-        if(!$this->modelMap->isPrimaryAutoIncerement()) {
+        // Composite primary keys;
+        if(!$this->modelMap->isPrimaryAutoIncrement()) {
             return $this->storeByCompositePrimaryKey($columns);
         }
 
-        $primaryKeyColumn = $this->modelMap->getPrimaryKeyColumns()[0];
-        if(!array_key_exists($primaryKeyColumn, $columns)) {
-            $columns[$primaryKeyColumn] = $this->insert($columns, $this->modelMap->getTable());
-        }
-        else {
-            $this->updateByPrimaryKey($columns, $primaryKeyColumn);
+        //Add new DB entry or update existing one, if the primary key (ID) exists
+        $primaryKey = $this->modelMap->getPrimaryKeyColumns()[0];
+        $table = $this->modelMap->getTable();
+
+        // If PK exists → CHECK RECORD EXISTENCE
+        $affected = $this->updateByPrimaryKey($columns, $primaryKey);
+
+        if ($affected === 0) {
+            // UPDATE failed → INSERT instead
+            $columns[$primaryKey] = $this->insert($columns, $table);
         }
 
         return $columns;
@@ -340,24 +424,35 @@ class DBStorage implements IDBStorage
     protected function storeByCompositePrimaryKey(array $columns): array
     {
         $primaryKeyColumns = $this->modelMap->getPrimaryKeyColumns();
-        $query = $this->table($primaryKeyColumns);
+        $table = $this->modelMap->getTable();
 
-        foreach($primaryKeyColumns as $key) {
+        if($this->modelMap->hasTimeStamps()) {
+            $columns = $this->addTimeStamps($columns);
+        }
+
+        // Build base query for matching PK
+        $query = DB::table($table);
+        foreach ($primaryKeyColumns as $key) {
+            if (!array_key_exists($key, $columns)) {
+                throw new CodeException(
+                    "Missing composite primary key column: {$key}",
+                    'lf2119',
+                    ['columns' => $columns]
+                );
+            }
             $query->where($key, $columns[$key]);
         }
 
-        $dbItem = $query->first();
         try {
-            if(empty($dbItem)) { // add new item
-                $this->insert($columns, $this->modelMap->getTable());
+            // Attempt UPDATE first
+            $affected = $query->limit(1)->update($columns);
 
-                return $columns;
+            if ($affected === 0) {
+                // If no rows updated → INSERT
+                DB::table($table)->insert($columns);
             }
-            else {
-                 $query->limit(1)->update($columns);
 
-                 return $columns;
-            }
+            return $columns;
         }
         catch (QueryException $e) {
             $this->processSQLerrors($e);
@@ -372,22 +467,41 @@ class DBStorage implements IDBStorage
      */
     public function storeMultiple(Collection $columnsSet) : Collection
     {
-        if(count($this->modelMap->getPrimaryKeyColumns()) > 1) {
-            throw new CodeException('Method storeMultiple not implemented for composite primary keys.', 'lf2105');
+        $primaryKeys = $this->modelMap->getPrimaryKeyColumns();
+        if (count($primaryKeys) > 1) {
+            throw new CodeException(
+                'storeMultiple is not implemented for composite primary keys.',
+                'lf2105'
+            );
         }
 
-        foreach($columnsSet as $index => $columns) {
-            if($this->modelMap->hasTimeStamps()) {
+        $primaryKey = $primaryKeys[0];
+        $table = $this->modelMap->getTable();
+
+        foreach ($columnsSet as $index => $columns) {
+
+            // 1. timestamps
+            if ($this->modelMap->hasTimeStamps()) {
                 $columns = $this->addTimeStamps($columns);
             }
 
-            $primaryKeyColumn = $this->modelMap->getPrimaryKeyColumns()[0];
-            if(!array_key_exists($primaryKeyColumn, $columns)) {
-                $columnsSet[$index][$primaryKeyColumn] = $this->insert($columns, $this->modelMap->getTable());
+            // 2. Try UPDATE if PK exists
+            if (array_key_exists($primaryKey, $columns)) {
+
+                $affected = $this->updateByPrimaryKey($columns, $primaryKey);
+
+                if ($affected === 0) {
+                    // 3. No row updated → INSERT new row
+                    $columns[$primaryKey] = $this->insert($columns, $table);
+                }
             }
             else {
-                $this->updateByPrimaryKey($columns, $primaryKeyColumn);
+                // 4. No PK → INSERT new row
+                $columns[$primaryKey] = $this->insert($columns, $table);
             }
+
+            // 5. Save final result back into the collection
+            $columnsSet[$index] = $columns;
         }
 
         return $columnsSet;
@@ -402,11 +516,32 @@ class DBStorage implements IDBStorage
      */
     protected function updateByPrimaryKey(array $columns, string $primaryKeyColumn) : bool
     {
-        if(count($columns) == 0 || !array_key_exists($primaryKeyColumn, $columns))
-            return true;
+        // Basic validation: we MUST have the primary key
+        if (!array_key_exists($primaryKeyColumn, $columns)) {
+            throw new CodeException(
+                "Missing primary key '{$primaryKeyColumn}' in updateByPrimaryKey",
+                'lf2107',
+                ['columns' => $columns]
+            );
+        }
+
+        // No columns to update → return 0 affected rows
+        if (count($columns) === 1) { // only Primary key present
+            return 0;
+        }
+
+        $table = $this->modelMap->getTable();
+        $pkValue = $columns[$primaryKeyColumn];
 
         try {
-            return DB::table($this->modelMap->getTable())->where($primaryKeyColumn, $columns[$primaryKeyColumn])->limit(1)->update($columns);
+            // 3. Perform the update
+            $affected = DB::table($table)
+                ->where($primaryKeyColumn, $pkValue)
+                ->limit(1)
+                ->update($columns);
+
+            // Always return int, never bool/null
+            return (int)$affected;
         }
         catch (QueryException $e) {
             $this->processSQLerrors($e);
@@ -420,11 +555,15 @@ class DBStorage implements IDBStorage
      */
     protected function addTimeStamps(array $columns): array
     {
-        $columns['updated_at'] = Carbon::now()->toDateTimeString();
+        $now = Carbon::now()->toDateTimeString();
+        $primaryKey = $this->modelMap->getPrimaryKeyColumns()[0];
 
-        // add created_at for a new DB entry
-        if(!array_key_exists($this->modelMap->getPrimaryKeyColumns()[0], $columns)) {
-            $columns['created_at'] = $columns['updated_at'];
+        // Always update updated_at
+        $columns['updated_at'] = $now;
+
+        // created_at only when PK missing → new record
+        if (!array_key_exists($primaryKey, $columns)) {
+            $columns['created_at'] = $now;
         }
 
         return $columns;
@@ -439,12 +578,35 @@ class DBStorage implements IDBStorage
     protected function insert(array $columns, string $table): int
     {
         try {
-            return DB::table($table)->insertGetId($columns);
+            $id = DB::table($table)->insertGetId($columns);
+
+            // insertGetId MUST return scalar (int or string)
+            if (!is_scalar($id)) {
+                throw new CodeException(
+                    'Database did not return a valid primary key after insert.',
+                    'lf2130',
+                    ['returned_id' => $id, 'table' => $table]
+                );
+            }
+
+            // convert to integer explicitly
+            $id = (int)$id;
+
+            if ($id <= 0) {
+                throw new CodeException(
+                    'Insert returned an invalid primary key (<= 0).',
+                    'lf2131',
+                    ['returned_id' => $id, 'table' => $table]
+                );
+            }
+
+            return $id;
         }
-        catch(QueryException $e) {
+        catch (QueryException $e) {
             $this->processSQLerrors($e);
         }
     }
+
 
     /**
      * @param array $columns
@@ -456,18 +618,20 @@ class DBStorage implements IDBStorage
     public function update (array $columns, array $conditions) : int
     {
         if(count($columns) === 0 || empty($conditions))
-            return true;
+            return 0;
 
         if($this->modelMap->hasTimeStamps()) {
             $columns['updated_at'] = Carbon::now()->toDateTimeString();
         }
 
+        // Normalize all conditions into [column, operator, value]
+        $normalized = $this->normalizeConditions($conditions);
+
         try {
             $query = DB::table($this->modelMap->getTable());
 
-            foreach($conditions as $condition) {
-                $operator = count($condition) === 3 ? $condition[2] : '=';
-                $query = $this->prepareQueryWhere($query, $condition[0], $condition[1], $operator);
+            foreach($normalized as [$column, $operator, $value]) {
+                $this->prepareQueryWhere($query, $column, $value, $operator);
             }
 
             return $query->update($columns);   //returns number of affected rows
@@ -479,7 +643,7 @@ class DBStorage implements IDBStorage
 
     /**
      * @param array $selectedColumns
-     * @return int
+     * @return int - number of affected rows
      * @throws CodeException
      * @throws Exception
      */
@@ -493,23 +657,27 @@ class DBStorage implements IDBStorage
                 ]);
         }
 
-        $selectedColumns['updated_at'] = Carbon::now()->toDateTimeString();
+        if($this->modelMap->hasTimeStamps()) {
+            $selectedColumns['updated_at'] = Carbon::now()->toDateTimeString();
+        }
 
         $updatingStatus = $this->updateByPrimaryKey($selectedColumns, $primaryKey);
 
-        return $updatingStatus;  //number of affected rows
+        return $updatingStatus;
     }
 
     /**
      * @param array $selectedColumns
      * @param array $conditions
-     * @return int
+     * @return int - number of affected rows
      * @throws CodeException
      * @throws Exception
      */
     public function patchByConditions(array $selectedColumns, array $conditions) : int
     {
-        $selectedColumns['updated_at'] = Carbon::now()->toDateTimeString();
+        if($this->modelMap->hasTimeStamps()) {
+            $selectedColumns['updated_at'] = Carbon::now()->toDateTimeString();
+        }
 
         $updatingStatus = $this->update($selectedColumns, $conditions);
 
@@ -521,23 +689,35 @@ class DBStorage implements IDBStorage
      * @param bool $permanentDelete
      * @return int
      */
-    public function deleteById (int $id, bool $permanentDelete = false) : int
+    public function deleteById(int $id, bool $permanentDelete = false): int
     {
         $table = $this->modelMap->getTable();
+        $primaryKey = $this->modelMap->getPrimaryKeyColumns()[0];
 
-        if ($this->modelMap->hasSoftDeletes() && !$permanentDelete) {
-            $updatedColumns[$table. '.deleted_at'] = Carbon::now()->toDateTimeString();
+        try {
+            if ($this->modelMap->hasSoftDeletes() && !$permanentDelete) {
+                // Correct column name
+                $updatedColumns = [
+                    'deleted_at' => Carbon::now()->toDateTimeString()
+                ];
 
-            $affectedRows = DB::table($table)->where($table . '.id', $id)->whereNull('deleted_at')
-                ->limit(1)->update(
-                    $updatedColumns
-                );
+                // Soft delete — must use unqualified column names
+                return DB::table($table)
+                    ->where($primaryKey, $id)
+                    ->whereNull('deleted_at')
+                    ->limit(1)
+                    ->update($updatedColumns);
+            }
+
+            // Hard delete
+            return DB::table($table)
+                ->where($primaryKey, $id)
+                ->limit(1)
+                ->delete();
         }
-        else {  //permament delete
-            $affectedRows =  DB::table($this->modelMap->getTable())->where($table. '.id', $id)->limit(1)->delete();
+        catch (QueryException $e) {
+            $this->processSQLerrors($e);
         }
-
-        return $affectedRows;
     }
 
     /**
@@ -545,33 +725,41 @@ class DBStorage implements IDBStorage
      * @param bool $permanentDelete
      * @return int - number of affected rows
      */
-    public function deleteByPrimaryKey(array $primaryKeyColumns, bool $permanentDelete = false) : int
+    public function deleteByPrimaryKey(array $primaryKeyColumns, bool $permanentDelete = false): int
     {
+        $table = $this->modelMap->getTable();
+        $pkList = $this->modelMap->getPrimaryKeyColumns();
+
+        // Build query with all PK conditions
+        $query = DB::table($table);
+
+        foreach ($pkList as $key) {
+            if (!array_key_exists($key, $primaryKeyColumns)) {
+                throw new CodeException(
+                    "Missing primary key part: {$key}",
+                    'lf2119',
+                    ['given' => $primaryKeyColumns]
+                );
+            }
+            $query->where($key, $primaryKeyColumns[$key]);
+        }
+
         try {
-            $primaryKey = $this->modelMap->getPrimaryKeyColumns();
-
-            $table = $this->modelMap->getTable();
-            $query = DB::table($table);
-
-            foreach($primaryKey as $key) {
-                if(!isset($primaryKeyColumns[$key])) {
-                    throw new Exception('$primaryKeyColumns attribute in deleteByPrimaryKey doesn\'t contain all of the primary keys defined in the ModelMap', 'lf2119');
-                }
-                $query->where($key, $primaryKeyColumns[$key]);
-            }
-
+            // Soft delete
             if ($this->modelMap->hasSoftDeletes() && !$permanentDelete) {
-                $updatedColumns[$table. '.deleted_at'] = Carbon::now()->toDateTimeString();
 
-                $affectedRows = DB::table($table)->whereNull('deleted_at')
-                    ->limit(1)->update(
-                        $updatedColumns
-                    );
+                $updatedColumns = [
+                    'deleted_at' => Carbon::now()->toDateTimeString()
+                ];
 
-                return $affectedRows;
+                return $query
+                    ->whereNull('deleted_at')
+                    ->limit(1)
+                    ->update($updatedColumns);
             }
 
-            return DB::table($this->modelMap->getTable())->limit(1)->delete();
+            // Hard delete
+            return $query->limit(1)->delete();
         }
         catch (QueryException $e) {
             $this->processSQLerrors($e);
@@ -589,22 +777,36 @@ class DBStorage implements IDBStorage
      *
      * @return int - number of affected rows
      */
-    public function deleteByConditions(array $conditions, int $limit = 100, bool $permanentDelete = false) : int
+    public function deleteByConditions(array $conditions, int $limit = PHP_INT_MAX, bool $permanentDelete = false): int
     {
+        $table = $this->modelMap->getTable();
+        $normalized = $this->normalizeConditions($conditions);
+
         try {
-            $table = $this->modelMap->getTable();
-            $query = $permanentDelete
-                ? $this->queryByConditions($conditions, [null])
-                : $this->queryByConditions($conditions);
+            // Build base query without SELECT clause
+            $query = ($permanentDelete)
+                ? DB::table($table)
+                : $this->table([null]); // no SELECT
 
-            if ($this->modelMap->hasSoftDeletes() && !$permanentDelete) {
-                $updatedColumns[$table. '.deleted_at'] = Carbon::now()->toDateTimeString();
-
-                $affectedRows = $query->limit($limit)->update($updatedColumns);
-
-                return $affectedRows;
+            // Apply all conditions
+            foreach ($normalized as [$column, $operator, $value]) {
+                $this->prepareQueryWhere($query, $column, $value, $operator);
             }
 
+            // SOFT DELETE
+            if ($this->modelMap->hasSoftDeletes() && !$permanentDelete) {
+
+                $updatedColumns = [
+                    'deleted_at' => Carbon::now()->toDateTimeString()
+                ];
+
+                return $query
+                    ->whereNull('deleted_at')
+                    ->limit($limit)
+                    ->update($updatedColumns);
+            }
+
+            // HARD DELETE
             return $query->limit($limit)->delete();
         }
         catch (QueryException $e) {

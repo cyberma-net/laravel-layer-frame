@@ -5,7 +5,6 @@ namespace Cyberma\LayerFrame\Exceptions;
 
 class ExceptionHandler
 {
-
     //creates json or array response based on the Exception
     public function translateToResponse (Exception $e, ?string $format = 'application/json')
     {

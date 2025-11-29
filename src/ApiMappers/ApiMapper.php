@@ -26,32 +26,31 @@ class ApiMapper implements IApiMapper
     }
 
 
-    public function mapModelToApi(IModel $model, array $apiMap) : array
+    public function mapModelToApi(IModel $model, array $apiMap): array
     {
-        $attributes = $model->toArray();
+        $source = $model->toArray();
+        $output = [];
 
-        $outAttributes = [];
-        foreach($apiMap as $attr => $apiName) {
-            //if attribute is numeric, that means, that it is not associative ('attrName' => 'newAttrName'), just attributes listed in simple array to avoid repeating of the attr name
+        foreach ($apiMap as $key => $value) {
+            if (!is_numeric($key)) {  // associative mapping: attr => apiName
+                $attrName = $key;
+                $apiName = $value;
+            }
+            else {  // numeric mapping: [ "id", "name" ]
+                $attrName = $value;
+                $apiName = $value;
+            }
 
-            if(is_numeric($attr)) {
-                if(array_key_exists($apiName, $this->customMappers)) {
-                    $outAttributes[$apiName] = ($this->customMappers[$apiName])($model);
-                }
-                else {
-                    $outAttributes[$apiName] = array_key_exists($apiName, $attributes) ? $attributes[$apiName] : null;
-                }
+            // custom mapper
+            if (isset($this->customMappers[$attrName])) {
+                $output[$apiName] = ($this->customMappers[$attrName])($model);
+                continue;
             }
-            else {
-                if(array_key_exists($attr, $this->customMappers)) {
-                    $outAttributes[$apiName] = ($this->customMappers[$attr])($model);
-                }
-                else {
-                    $outAttributes[$apiName] = array_key_exists($attr, $attributes) ? $attributes[$attr] : null;
-                }
-            }
+
+            // default map from attributes
+            $output[$apiName] = $source[$attrName] ?? null;
         }
 
-        return $outAttributes;
+        return $output;
     }
 }

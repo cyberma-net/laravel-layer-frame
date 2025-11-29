@@ -21,7 +21,7 @@ class InputParser implements IInputParser
     public function parse(IInputModel $inputModel, array $requestData, string $validatedSet, array $additionalInputs = []): IInputModel
     {
 
-        if (empty($requestData))  //validator requires an array
+        if ($requestData === null)  //validator requires an array
             $requestData = [];
 
         if(!empty($additionalInputs)) {
@@ -36,7 +36,8 @@ class InputParser implements IInputParser
 
         $inputModel->doExtraValidations($requestData, $validatedSet); //throws Exception, if fails
 
-        $inputModel->fillAttributes($requestData);
+        $validatedData = $validator->validated();
+        $inputModel->hydrate($validatedData);
 
         return $inputModel;
     }
@@ -49,6 +50,6 @@ class InputParser implements IInputParser
      */
     protected function getValidator (array $data, array $rules, array $messages = []) : Validator
     {
-        return empty($messages) ? ValidatorFacade::make($data, $rules) : ValidatorFacade::make($data, $rules, $messages);
+        return ValidatorFacade::make($data, $rules, $messages);
     }
 }

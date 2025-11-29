@@ -16,7 +16,6 @@ trait DBErrors
      */
     protected function processSQLerrors (QueryException $exception)
     {
-
         $errorInfo = $exception->errorInfo;
         if (empty($errorInfo)) {   //error between DB and PHP
             throw new CodeException(_('Database communication error.'), 'lf2103', ['message' => $exception->getMessage(), 'bindings' => $exception->getBindings()]);

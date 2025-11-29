@@ -8,15 +8,11 @@ use Cyberma\LayerFrame\Exceptions\CodeException;
 
 class Model implements IModel
 {
-
-    /* ATTRIBUTES
-     * - available for magic get/set
-     * - start with $_
-     */
-
-    const DEFAULT_ATTRIBUTES = [];  // internal attrName => defaultValue;  e.g.  '_id' => 1
-
-    // Common attributes that all models have
+    /*---------------------------------
+      Public attributes (magic)
+      - all protected properties starting with "_"
+      - exposed as camelCase keys (id, name, ...)
+    ---------------------------------*/
     protected $_id;
 
     protected $_createdAt;
@@ -24,11 +20,21 @@ class Model implements IModel
     protected $_updatedAt;
 
     //// These are handled by the class itself, don't change them!
+    ///     /**
+    //     * Internal registry:
+    //     *  'id' => &$_id
+    //     *  'createdAt' => &$_createdAt
+    //     */
        protected $attributes = [];   //filled automatically by recognizing members' names;  $attrName => pointer to var;  id => &$_id
 
+      /**
+       * Tracks original values of dirty attributes
+       *  'id' => 10
+       */
        protected $originalAttributes = [];    //will be filled with everything that has changed. Used for data updates; Key is set to the !internal! variable name, e.g. _id
-    //// end of automatically handled
 
+
+    const DEFAULT_ATTRIBUTES = [];  // internal attrName => defaultValue;  e.g.  '_id' => 1
 
     /**
      * Model constructor.
@@ -37,11 +43,11 @@ class Model implements IModel
     public function __construct(array $attributes = [])
     {
         $this->registerAttributes();
-        $this->setAttributes($attributes);
+        $this->setMany($attributes);
     }
 
     /**
-     * Registers all the variables defined in the class with names starting with _, ex_
+     * Registers all the variables defined in the class with names starting with _
      */
     protected function registerAttributes() : void
     {
@@ -53,23 +59,57 @@ class Model implements IModel
     }
 
     /**
-     * All attributes will be marked as changed (dirty) by default
+     * Dirty tracking on
+     *
+     * @param string $name
+     * @param mixed $value
+     * @return void
+     * @throws CodeException
+     */
+    public function set(string $name, mixed $value): void
+    {
+        if (!array_key_exists($name, $this->attributes)) {
+            throw new CodeException("Attribute '$name' does not exist in ".static::class);
+        }
+
+        $current = $this->attributes[$name];
+
+        if (!array_key_exists($name, $this->originalAttributes) && $current !== $value) {
+            $this->originalAttributes[$name] = $current;
+        }
+
+        $this->attributes[$name] = $value;
+    }
+
+    /**
+     * @param string $name
+     * @return mixed
+     * @throws CodeException
+     */
+    public function get(string $name)
+    {
+        if(array_key_exists($name, $this->attributes)) {  //check for language specific attributes first
+            return $this->attributes[$name];
+        }
+
+        throw new CodeException('Requested attribute does not exist in Model.', 'lf2115', ['attribute' => $name]);
+    }
+
+    /**
+     * All attributes dirty
      *
      * @param array $attributes
-     * @param array $ignoreAttributes
+     * @param array $ignore
+     * @return void
+     * @throws CodeException
      */
-    public function setAttributes(array $attributes, array $ignoreAttributes = []) : void
+    public function setMany(array $attributes, array $ignore = []): void
     {
         foreach ($attributes as $name => $value) {
-            if(in_array($name, $ignoreAttributes))  //ignore this attribute
-                continue;
+            if (in_array($name, $ignore)) continue;
 
-            if(array_key_exists($name, $this->attributes)) {
-
-                if( $this->attributes[$name] !== $value && !array_key_exists($name, $this->originalAttributes)) {  //set originalAttribute only once and if  it has been changed
-                    $this->originalAttributes[$name] = $this->attributes[$name];  //marks attribute as dirty (changed)
-                }
-                $this->attributes[$name] = $value;
+            if (array_key_exists($name, $this->attributes)) {
+                $this->set($name, $value);
             }
         }
     }
@@ -79,12 +119,12 @@ class Model implements IModel
      * No attribute will be marked as dirty
      * LS columns are expected to come as arrays
      * @param array $attributes
-     * @param array $ignoreAttributes
+     * @param array $ignore
      */
-    public function fill (array $attributes, array $ignoreAttributes = []) : void
+    public function hydrate(array $attributes, array $ignore = []) : void
     {
         foreach ($attributes as $name => $value) {
-            if(in_array($name, $ignoreAttributes))  //ignore this attribute
+            if(in_array($name, $ignore))  //ignore this attribute
                 continue;
 
             if (array_key_exists($name, $this->attributes)) {
@@ -106,6 +146,34 @@ class Model implements IModel
         throw new CodeException('Requested attribute $'. $name . ' does not exist in the class: ' . static::class, 'lf2114', ['class' => static::class]) ;
     }
 
+    /**
+     * @param string $name
+     * @param mixed $value
+     * @throws CodeException
+     */
+    public function __set(string $name, $value)
+    {
+        if(array_key_exists($name, $this->attributes)) {
+
+            if( $this->attributes[$name] !== $value && !array_key_exists($name, $this->originalAttributes)) {   //set originalAttribute only once and if  it has been changed
+                $this->originalAttributes[$name] = $this->attributes[$name];
+            }
+
+            $this->attributes[$name] = $value;
+        }
+        else {
+            throw new CodeException('Requested attribute for set does not exist in the class: ' . static::class, '109903', ['attribute' => $name, 'class' => static::class]) ;
+        }
+    }
+
+    /**
+     * @param string $name
+     * @return bool
+     */
+    public function __isset(string $name) : bool
+    {
+        return array_key_exists($name, $this->attributes);
+    }
 
     /**
      * @param $attributes
@@ -133,26 +201,6 @@ class Model implements IModel
 
     /**
      * @param string $name
-     * @param mixed $value
-     * @throws CodeException
-     */
-    public function __set(string $name, $value)
-    {
-        if(array_key_exists($name, $this->attributes)) {
-
-            if( $this->attributes[$name] !== $value && !array_key_exists($name, $this->originalAttributes)) {   //set originalAttribute only once and if  it has been changed
-                $this->originalAttributes[$name] = $this->attributes[$name];
-            }
-
-            $this->attributes[$name] = $value;
-        }
-        else {
-            throw new CodeException('Requested attribute for set does not exist in the class: ' . static::class, '109903', ['attribute' => $name, 'class' => static::class]) ;
-        }
-    }
-
-    /**
-     * @param string $name
      */
     public function resetAttributeToOriginal(string $name)
     {
@@ -163,86 +211,68 @@ class Model implements IModel
         }
     }
 
-     /**
-     * @param $key
-     * @return mixed
-     * @throws CodeException
-     */
-    public function getAttribute(string $name)
-    {
-        if(array_key_exists($name, $this->attributes)) {  //check for language specific attributes first
-            return $this->attributes[$name];
-        }
-
-        throw new CodeException('Requested attribute does not exist in Model.', 'lf2115', ['attribute' => $name]);
-    }
-
     /**
-     * @param array $whichAttributes
+     * @param array $names
      * @return array
      */
-    public function getAttributes(array $whichAttributes = []) : array
+    public function attributes(array $names = []) : array
     {
-        if($whichAttributes === []) {
+        if($names === []) {
             return $this->attributes;
         }
 
         $out = [];
-        foreach($whichAttributes as $attrName) {
-            $out[$attrName] = $this->attributes['_' . $attrName];
+        foreach($names as $name) {
+            if (array_key_exists($name, $this->attributes)) {
+                $out[$name] = $this->attributes[$name];
+            }
         }
 
         return $out;
     }
 
     /**
-     * @param string $attr
+     * @param string $name
      * @return bool
      */
-    public function hasAttribute (string $attr) : bool
+    public function hasAttribute(string $name) : bool
     {
-        return array_key_exists($attr, $this->attributes);
+        return array_key_exists($name, $this->attributes);
     }
 
     /**
-     * @param string $property
-     * @return bool
-     */
-    public function __isset(string $property) : bool
-    {
-        return !empty($this->attributes[$property]);
-    }
-
-    /**
-     * @return array
-     */
-    public function toArray(array $whichAttributes = [], array $except = []) : array
-    {
-        $out = [];
-        if($whichAttributes !== []) {
-            return $this->toArraySpecifiedAttributes($whichAttributes, $except);
-        }
-
-        foreach($this->attributes as $attr => $value) {
-            if(in_array($attr, $except)) continue;
-            $out[$attr] = $value;
-        }
-
-        return $out;
-    }
-
-    /**
-     * @param array $whichAttributes
+     * @param array $names
      * @param array $except
      * @return array
      */
-    protected function toArraySpecifiedAttributes(array $whichAttributes, array $except = []) : array
+    public function toArray(array $names = [], array $except = []) : array
     {
-        foreach($whichAttributes as $attr) {
-            if(in_array($attr, $except)) continue;
+        $out = [];
+        if($names !== []) {
+            return $this->toArraySpecifiedAttributes($names, $except);
+        }
 
-            if(array_key_exists($attr, $this->attributes)) {
-                $out[$attr] = $this->attributes[$attr];
+        foreach($this->attributes as $name => $value) {
+            if(in_array($name, $except)) continue;
+            $out[$name] = $value;
+        }
+
+        return $out;
+    }
+
+    /**
+     * @param array $names
+     * @param array $except
+     * @return array
+     */
+    protected function toArraySpecifiedAttributes(array $names, array $except = []) : array
+    {
+        $out = [];
+        foreach($names as $name) {
+            if(in_array($name, $except)) continue;
+
+            if(array_key_exists($name, $this->attributes)) {
+                $out[$name] = $this->attributes[$name];
             }
         }
 
@@ -252,9 +282,8 @@ class Model implements IModel
     /**
      * @return array
      */
-    public function getAllNotNullAttributes () : array
+    public function getAllNotNullAttributes() : array
     {
-
         $attrs = [];
         foreach($this->attributes as $attr => $value) {
             if(!is_null($value)) {
@@ -265,72 +294,72 @@ class Model implements IModel
         return $attrs;
     }
 
-    public function makeAllAttributesDirty(bool $force = false)
+    /**
+     * @param bool $force
+     * @return void
+     */
+    public function makeAllAttributesDirty(bool $force = false): void
     {
         foreach($this->attributes as $attr => $value) {
-            $this->makeAttributeDirty($attr, null, $force);
+            $this->markDirty($attr, [], $force);
         }
     }
 
     /**
-     * @param string|array $attribute
-     * @param mixed $oldValue
+     * @param string|array $names
+     * @param array $oldValues - ['attributeName' => 'value']
+     * @param bool $force
      */
-    public function makeAttributeDirty(string|array $attributes, $oldValue = null, bool $force = false) : void
+    public function markDirty(string|array $names, array $oldValues = [], bool $force = false) : void
     {
-        if(!is_array($attributes)) {
-            $attributes = [$attributes];
+        if(!is_array($names)) {
+            $names = [$names];
         }
 
-        if(!is_array($oldValue)) {
-            $oldValue = [$oldValue];
-        }
-
-        foreach($attributes as $i => $attribute) {
+        foreach($names as $name) {
             if($force) {
-                $this->originalAttributes[$attribute] = null;
+                $this->originalAttributes[$name] = null;
                 continue;
             }
 
-            if(!array_key_exists($attribute, $this->originalAttributes)) {  //set originalAttribute only once and if  it has been changed
-                $this->originalAttributes[$attribute] = count($oldValue) > $i ? $oldValue[$i] : null;   //marks attribute as dirty (changed)
+            if(!array_key_exists($name, $this->originalAttributes)) {  //set originalAttribute only once and keep the oldest value
+                $this->originalAttributes[$name] = isset($oldValues[$name]) ? $oldValues[$name] : null;   //marks attribute as dirty (changed)
             }
         }
 
     }
 
     /**
-     * @param array $selectedAttributes
+     * @param array $selectedNames
      * @param array $except
      * @return array
      */
-    public function getChangedAttributes(array $selectedAttributes = [], array $except = []): array
+    public function getDirty(array $selectedNames = [], array $except = []): array
     {
-
-        $allAttributes = $this->toArray($selectedAttributes, $except);
-        $output = [];
+        $allAttributes = $this->toArray($selectedNames, $except);
+        $dirty = [];
         foreach($this->originalAttributes as $name => $value) {
             if (array_key_exists($name, $allAttributes) && $value !== $allAttributes[$name])  //take only changed values
-                $output[$name] = $allAttributes[$name];
+                $dirty[$name] = $allAttributes[$name];
         }
 
-        return $output;
+        return $dirty;
     }
 
     /**
-     * @param string[] $attributes, [] means all of them
+     * @param string[] $names, [] means all of them
      * @return void
      */
-    public function resetDirtyAttributes(array $attributes = [])
+    public function resetDirty(array $names = []): void
     {
-        if(empty($attributes)) {
+        if(empty($names)) {
             $this->originalAttributes = [];
 
             return;
         }
 
-        foreach($attributes as $attr) {
-            unset($this->originalAttributes[$attr]);
+        foreach($names as $name) {
+            unset($this->originalAttributes[$name]);
         }
     }
 }

@@ -65,7 +65,7 @@ interface IInputModel
     /**
      * @param array $rawData
      */
-    public function fillAttributes(array $rawData);
+    public function hydrate(array $rawData);
 
     /**
      * @param string $validatedSet

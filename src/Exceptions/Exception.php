@@ -8,7 +8,7 @@ use Throwable;
 class Exception extends LaravelException
 {
 
-    protected $data, $httpCode, $lfCode;
+    protected $data, $httpStatus, $lfCode;
 
     protected $customData = null;
 
@@ -16,21 +16,17 @@ class Exception extends LaravelException
      * Exception constructor.
      * @param string $message
      * @param int $code
-     * @param int $httpCode
+     * @param int $httpStatus
      * @param null $data
      * @param Throwable|null $previous
      */
-    public function __construct(string $message = '', string|int $code = 0, $data = null, int $httpCode = 200, ?Throwable $previous = null)
+    public function __construct(string $message = '', string|int $lfCode = '0000', $data = null, int $httpStatus = 400, ?Throwable $previous = null)
     {
-        $this->lfCode = (string)$code;
+        $this->lfCode = (string)$lfCode;
 
-        if(is_string($code)) {
-            $code = (int)substr($code, 3);
-        }
+        parent::__construct($message, 0, $previous);
 
-        parent::__construct($message, $code, $previous);
-
-        $this->httpCode = $httpCode;
+        $this->httpStatus = $httpStatus;
         $this->data = $data;
     }
 
@@ -55,7 +51,7 @@ class Exception extends LaravelException
      */
     public function getHttpError()
     {
-        return $this->httpCode;
+        return $this->httpStatus;
     }
 
     /**
@@ -63,7 +59,7 @@ class Exception extends LaravelException
      */
     public function setHttpError($httpError)
     {
-        $this->httpCode = $httpError;
+        $this->httpStatus = $httpError;
     }
 
     /**
@@ -88,5 +84,18 @@ class Exception extends LaravelException
     public function getLfCode(): string
     {
         return $this->lfCode;
+    }
+
+    /**
+     * @return array
+     */
+    public function toArray(): array
+    {
+        return [
+            'message' => $this->getMessage(),
+            'lfCode'  => $this->lfCode,
+            'data'    => $this->data,
+            'status'  => $this->httpStatus,
+        ];
     }
 }

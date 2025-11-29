@@ -179,7 +179,7 @@ class InputModel implements IInputModel
     /**
      * @param array $rawData
      */
-    public function fillAttributes (array $rawData)
+    public function hydrate(array $rawData)
     {
         foreach($rawData as $name => $value) {
             if(array_key_exists($name, $this->inputFields)) {
@@ -225,9 +225,10 @@ class InputModel implements IInputModel
      * @param string $property
      * @return bool
      */
-    public function __isset(string $property)
+    public function __isset(string $property): bool
     {
-        return !empty($this->inputFields[$property]);
+        return array_key_exists($property, $this->inputFields)
+            && $this->inputFields[$property] !== null;
     }
 
     /**
