@@ -1,99 +1,276 @@
 # Layer Frame for Laravel
-### Layered structure for your big Laravel projects
+### A scalable, layered architecture for large Laravel projects
 
 ## Motivation
-Laravel's native Active Record approach to models and database provides an easy to use environment
-for handling data and database. However, the models are big, they handle many different tasks
-and therefore don't follow Single Responsibility Principle (SRP). Models tend to get huge over time.
+Laravel's native Active Record (Eloquent) is fantastic for small and medium-sized projects — but it becomes problematic at scale:
 
-On top of that, active record creates a very tight coupling between the code and the DB structure.
+- Models grow huge and violate Single Responsibility Principle (SRP)
+- Business logic ends up scattered across Controllers, Models, Traits, and global helpers
+- Tight coupling between database schema and business logic makes refactors dangerous
+- Testing large models becomes painful
+- Database structure leaks into the rest of the codebase
 
-Layer Frame brings a better code structure despite the need of more objects and classes.
-Especially bigger projects can benefit from better testability and separation of different tasks.
+Layer Frame solves these issues by introducing a strict, layered, dependency-flow and complete separation between:
+- your business logic
+- your internal domain models
+- your database schema
+- your input / API formats
 
-Using Repositories and DBMappers may seem like overkill at the beginning, but it will quickly 
-demonstrates its usefulness during refactors and code extending.
+This comes at the cost of more classes, but brings massive benefits:
+- refactoring safety
+- better testability
+- cleaner responsibilities
+- fully DB-agnostic data layer
+- predictable code structure
+- safer long-term evolution of the project
 
-### Main principles
+## Core Principles
 
-* Composition over inheritance
-* Single responsibility principle
-* Layered data flow
-* Types wherever possible
-* Settings over repeated code
+Layer Frame is built around a few objective architectural rules:
 
-## Layers
+1. **Layered structure (no jumping across layers)**
+   Each layer communicates only with the one directly below or above it. No Controller → DB, no Service → DBStorage, no random SQL inside Services.
+
+2. **Composition over inheritance**
+   Small composable objects instead of monolithic Models or deep inheritance trees.
+
+3. **Configuration over copy-pasted code**
+   Almost everything is controlled via simple configuration arrays:
+   - ATTRIBUTES_MAP
+   - PRIMARY_KEY
+   - JSON_COLUMNS
+   - COLUMN_ALIAS_MAP
+   - MANDATORY_ATTRIBUTES
+
+4. **90% typical flows must be easy**
+   Simple CRUD is nearly automatic.
+
+5. **The remaining 10% must be fully customizable**
+   Every layer has extension points for special logic.
+
+6. **Strict SRP + SOLID**
+   No class should do more than one job.
+
+7. **Infrastructure-agnostic**
+   DB storage can be swapped, mappings changed, and API formats redesigned without breaking the rest of the code.
+
+## Layer Overview
 
 ### Controllers
-Controllers validate input data and maps them into the internal represenation, i.e. models.
-Then, controllers call a service. After service returns data, controllers
-form required data format for the api and ships the data to the API.
+- Validate incoming data
+- Map inputs to InputModels
+- Call a Service method
+- Map results to API shape (using ApiMapper)
+- Return JSON
 
-Layer Frame provides classes such as Paginator and Searcher to make pagination and searching queries more 
-streamlined.
+Controllers do zero business logic.
 
-### Input Mappers
-Contain validation rules for incoming data
+Helpers included:
+- Paginator
+- Searcher
+
+For consistent pagination & search interfaces.
+
+### Input Models
+Represent incoming request structure.
+
+Inside each InputModel:
+- Validation rules
+- Custom messages (optional)
+- doExtraValidations() hook
+
+InputModel is the only place that "knows" the shape of incoming data.
 
 ### Input Parsers
-InputParser is a general class that takes the InputModel and validates the incoming data using the validation rules inside the InputModel. It uses laravel Validator to handle the validation.
-If there are special cases for data validation, you can create your own inputParser and inherit the base class. It is not usually needed.
+InputParser performs:
+- Validation (Laravel Validator)
+- Extra validations (custom)
+- Filling the model attributes safely
 
+InputParser is generic; you rarely need a custom implementation.
 
 ### Services
-Services handle business logic. This layer is often overlooked in the Laravel projects. It is not clear where
-to put complex business logic. Some tutorials extend the models making them even bigger and more coupled with everything.
-Other approach may be to put business logic into Controllers, which again expands greatly their original purpose.
+Services contain all business logic.
+
+A Service:
+- receives clean InputModels or Models
+- orchestrates Repositories
+- applies domain rules
+- returns domain Models
+
+Services never talk to the database directly.
 
 ### Repositories
+Repositories form the boundary between business logic and persistence.
 
-Connects Model Map, Data Mapper and Model Factory, maps model to a raw array
-that is sent to the SQL queries. Repository requires DBMapper, DBStorage and ModelFactory to work. 
+A Repository uses:
+- ModelMap (attribute → column map)
+- DBMapper (model ↔ DB row mapping)
+- DBStorage (actual SQL operations)
+- ModelFactory (model instantiation)
+
+Purpose:
+- Convert IModel → array for insert/update (via DBMapper)
+- Convert DB rows → Models (via DBMapper)
+- Execute standard DB operations via DBStorage
+
+Unlike Eloquent:
+- No "magic queries"
+- No Active Record domain pollution
+- Fully independent of SQL schema
+
+Repositories support:
+
+- get / first / count
+- search
+- store
+- delete
+- patch
+- composite keys
+
+All without exposing SQL to the Service.
+
+### DBMapper
+Maps between:
+- Layer Frame Model attribute ↔ SQL column
+
+Responsibilities:
+- Attribute→column mapping
+- Column→attribute mapping
+- JSON encoding/decoding
+- Automatic primary key handling
+- Custom mapping hooks
+- Normalizing conditions
+- Default value transformations
+
+DBMapper is the translator between your domain model and the raw DB.
 
 ### DBStorage
-DBStorageis a layer that knows how to communicate with SQL. It contains a few standard queries
-and provides interface for any custom queries. Its input should contain an object of columns and data. The returned
-value is raw data ready for mapping.
+The only class that actually touches SQL.
 
-### SQL Database
+Capabilities:
+- Select / count
+- Update / insert / patch
+- Composite primary key support
+- Soft deletes
+- Pagination
+- WHERE operator normalization: `=`, `<`, `>=`, `<=`, `like`, `%like%`, `like%`, `%like`, `null`, `not null`, `in`, `not in`, `between`, `date=`, `date>`, etc.
 
-## Objects
-
-### API Maps and mappers
-
-In the controller, the data in the form of models or array of models need to mapped to raw data convertable to a json.
-This can contain any custom mapping if needed.
+DBStorage is fully generic. It never knows anything about your Models or your domain.
 
 ### Models
+Domain objects representing your internal state. They are not Eloquent models.
 
-Models are basic data handlers. Each model is inherited from Model - beware, this is not an Eloquent model!
-The base model defines __set and __get magic methods for attributes and other useful functions.
+Features:
+- Magic __get/__set with attribute registry
+- Dirty tracking
+- hydrate() vs set()
+  - hydrate() sets internal state without marking dirty
+  - set() marks dirty attributes
+- toArray() for exporting
+- setMany() / getMany()
 
-Be careful about function fill and setAttributes. They differ in handling original data. Check the comments.
-
+Models contain zero DB logic, zero validation, zero business logic.
 
 ### Model Maps
+Declarative mapping:
 
-ModelMap is a class that knows how to map the model attributes to the mySQL columns. This is a layer that separates SQL from our code. No other code knows anything about the DB and its structure. This is the main difference to ActiveRecord which uses the column names all over the code, and creates very tight relationship between the DB and the code. That is a very bad approach that only works for smaller projects.
+```php
+const TABLE = 'users';
+const PRIMARY_KEY = ['id'];
+const ATTRIBUTES_MAP = [
+    'id'         => 'id',
+    'firstName'  => 'first_name',
+    'lastName'   => 'last_name',
+    'roles'      => 'roles_json',
+];
+```
 
-Another advantage of this approach is, that if you create anything new, you mostly only setup the parameters and you don't have to write much new code.
+ModelMap controls:
+- Table name
+- Attribute→column mapping
+- Hidden columns
+- JSON columns
+- Composite primary keys
+- Mandatory attributes
+- Column aliases for JOINs
+- Primary key auto-increment behavior
+- Custom mapping & demapping hooks
+- per-table DB error interpretations
 
-The main parameter of the class is const ATTRIBUTES_MAP. The following parameters are
+ModelMaps enable DB independence.
 
-protected $table = 'users';
-protected $primaryKey = 'id';
+### API Mapper
+Converts a Model or collection of Models into a pure array ready for JSON encoding.
 
-public $timestamps = true;
+Supports:
+- Renaming attributes for API
+- Custom attribute-specific callbacks
+- Filtering fields (API Map)
 
-These parameters set the table name, primary key name, which in majority cases should be id, we can turn off or on softdeletes and timestamps. In most cases we use both.
-The const JSON_COLUMNS contains those columns that are supposed to be transfered from the array type to json.
-
-All classes in this folder inherit ModelMap containing all the important functions.
-
+This is where you shape your external API format.
 
 ### Exceptions
+Layer Frame uses:
+- CodeException – structured domain exception with LF code
 
-All exceptions should be listed in the Exception.csv with its model code and a number. The list of exceptions
-helps finding the place, where the exception was thrown.
+A central Handler that:
+- Translates CodeExceptions to clean JSON responses
+- Handles HTTP codes
+- Normalizes output format
 
-Last update: 7th March 2025.
+All exceptions have a code format like: `lf21XX`
+
+This allows tracking and error reporting across the system.
+
+## Data Flow Summary
+
+```
+Request JSON
+↓
+InputParser → InputModel
+↓
+Service (business logic)
+↓
+Repository
+↓            ↓
+DBMapper   ←  DB rows
+↓
+DBStorage  (SQL)
+```
+
+Reverse direction brings data back mapped to Models, then to APIMapper, then to JSON.
+
+## Advantages Over Eloquent
+
+- **Massive refactor-safety**
+  Renaming columns, restructuring the DB, or introducing composite keys does not require hunting through dozens of Model methods and queries.
+
+- **Full control over queries**
+  No hidden Eloquent magic — SQL is predictable.
+
+- **Perfect testability**
+  Mock DBStorage or DBMapper easily.
+
+- **Clear responsibilities**
+  No more fat models or controllers.
+
+- **Independent data layers**
+  Change DB engine or schema without rewriting business logic.
+
+## When to Use Layer Frame
+
+Layer Frame is ideal when you have:
+- A big project with a long life-cycle
+- Multiple team members
+- Frequent refactoring
+- Complex business logic
+- High testability requirements
+- Domain-driven design orientations
+- Microservice-like components inside a monolith
+
+Not recommended for tiny CRUD apps — Eloquent is fine there.
+
+---
+
+Last update: 29th November 2025.
