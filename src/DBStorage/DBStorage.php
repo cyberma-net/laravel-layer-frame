@@ -404,6 +404,13 @@ class DBStorage implements IDBStorage
         $primaryKey = $this->modelMap->getPrimaryKeyColumns()[0];
         $table = $this->modelMap->getTable();
 
+        //If Primary Key is missing → INSERT NEW
+        if (!isset($columns[$primaryKey]) || empty($columns[$primaryKey])) {
+            $columns[$primaryKey] = $this->insert($columns, $table);
+
+            return $columns;
+        }
+
         // If PK exists → CHECK RECORD EXISTENCE
         $affected = $this->updateByPrimaryKey($columns, $primaryKey);
 
