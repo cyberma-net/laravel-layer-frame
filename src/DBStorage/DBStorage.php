@@ -412,7 +412,7 @@ class DBStorage implements IDBStorage
         //If Primary Key is missing → INSERT NEW
         if (!$this->hasPrimaryKeySet($columns, $primaryKey)) {
             $columns[$primaryKey] = $this->insert($columns, $table);
-            
+
             return $columns;
         }
 
