@@ -1,6 +1,6 @@
 {
   "name": "cyberma/laravel-layer-frame",
-  "version" : "1.7.5",
+  "version" : "1.8.0",
   "description": "Layer Frame for Laravel",
   "keywords": ["Data Mapper", "Laravel", "Layer frame"],
   "license": "MIT",
