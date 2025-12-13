@@ -8,6 +8,7 @@ use Cyberma\LayerFrame\Contracts\DBMappers\IDBMapper;
 use Cyberma\LayerFrame\Contracts\DBStorage\IDBStorage;
 use Cyberma\LayerFrame\Contracts\Errors\IErrorBag;
 use Cyberma\LayerFrame\Contracts\ModelMaps\IModelMap;
+use Cyberma\LayerFrame\Contracts\Models\IModelContextFactory;
 use Cyberma\LayerFrame\Contracts\Pagination\IPaginator;
 use Cyberma\LayerFrame\Contracts\Pagination\ITableSearcher;
 use Cyberma\LayerFrame\Contracts\Repositories\IRepository;
@@ -18,6 +19,7 @@ use Cyberma\LayerFrame\Errors\ErrorBag;
 use Cyberma\LayerFrame\Exceptions\ExceptionHandler;
 use Cyberma\LayerFrame\InputParsers\InputParser;
 use Cyberma\LayerFrame\ModelMaps\ModelMap;
+use Cyberma\LayerFrame\Models\ModelContextFactory;
 use Cyberma\LayerFrame\Pagination\InputModels\PaginatorInput;
 use Cyberma\LayerFrame\Pagination\InputModels\SearcherInput;
 use Cyberma\LayerFrame\Pagination\Paginator;
@@ -52,6 +54,10 @@ class LayerFrameServiceProvider extends ServiceProvider
 
         $this->app->singleton(IApiMapper::class, function () {
             return new ApiMapper();
+        });
+
+        $this->app->singleton(IModelContextFactory::class, function () {
+            return new ModelContextFactory();
         });
     }
 
