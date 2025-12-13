@@ -98,9 +98,9 @@ interface IRepository
      */
      public function get(array $attributes = [],
                         array $conditions = [],
-                        array $pagination = ['page' => 1, 'perPage' => 20],
-                        array $orderBy = ['attribute' => 'id', 'order' => 'desc'],
-                         ?string $collectionKeyParameter = null): Collection;
+                        array $pagination = [],
+                        array $orderBy = [],
+                        ?string $collectionKeyParameter = null): Collection;
 
     /**
      * @param array $attributes

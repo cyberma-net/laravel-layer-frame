@@ -87,8 +87,10 @@ class LayerFrameServiceProvider extends ServiceProvider
             $dbStorage = array_key_exists('dbStorage', $params) ? $params['dbStorage'] : $app->make(IDBStorage::class, $params);
             $dbMapper = array_key_exists('dbMapper', $params) ? $params['dbMapper'] : $app->make(IDBMapper::class, $params);
             $modelMap = $params['modelMap'];
+            $modelFactory = $params['modelFactory'] ?? $app->make(\Cyberma\LayerFrame\Contracts\Models\IModelFactory::class);
+            $contextFactory = $params['contextFactory'] ?? ($app->bound(IModelContextFactory::class) ? $app->make(IModelContextFactory::class) : null);
 
-            return new Repository($dbStorage, $dbMapper, $modelMap);
+            return new Repository($dbStorage, $dbMapper, $modelMap, $modelFactory, $contextFactory);
         });
     }
 }

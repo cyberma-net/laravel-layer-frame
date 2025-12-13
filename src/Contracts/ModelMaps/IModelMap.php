@@ -16,12 +16,12 @@ interface IModelMap
     public function exportDirtyAttributes(IModel $model, array $whichAttributes = [], array $except = []): array;
 
     /**
-     * @param Collection $models
+     * @param array $attributes
      * @param \stdClass $row
      * @param string|null $collectionKeyParameter
      * @return IModel
      */
-    public function doCustomDemapping(IModel $model, \stdClass $row, ?string $collectionKeyParameter = null) : IModel;
+    public function doCustomDemapping(Collection $attributes, \stdClass $row, ?string $collectionKeyParameter = null) : Collection;
 
     /**
      * @param string $code
@@ -121,7 +121,7 @@ interface IModelMap
      * @return mixed
      */
     public function getColumnForAttribute(string $attribute);
-   
+
     /**
      * @return array
      */

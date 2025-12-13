@@ -4,8 +4,6 @@ namespace Cyberma\LayerFrame\DBMappers\Factories;
 
 use Cyberma\LayerFrame\Contracts\DBMappers\IDBMapperFactory;
 use Cyberma\LayerFrame\Contracts\ModelMaps\IModelMap;
-use Cyberma\LayerFrame\Contracts\Models\IModelFactory;
-use Cyberma\LayerFrame\Contracts\Repositories\DBExporters\IModelDBExporter;
 use Cyberma\LayerFrame\DBMappers\DBMapper;
 
 
@@ -13,23 +11,17 @@ class DBMapperFactory implements IDBMapperFactory
 {
     private IModelMap $modelMap;
 
-    private IModelFactory $modelFactory;
-
     /**
      * DBMapperFactory constructor.
      * @param IModelMap $modelMap
-     * @param IModelFactory $modelFactory
-     * @param IModelDBExporter $modelDBExporter
      */
-    public function __construct(IModelMap $modelMap, IModelFactory $modelFactory)
+    public function __construct(IModelMap $modelMap)
     {
-
         $this->modelMap = $modelMap;
-        $this->modelFactory = $modelFactory;
     }
 
     public function createDBMapper(): DBMapper
     {
-        return new DBMapper($this->modelMap, $this->modelFactory);
+        return new DBMapper($this->modelMap);
     }
 }

@@ -6,6 +6,9 @@ use Cyberma\LayerFrame\Contracts\DBMappers\IDBMapper;
 use Cyberma\LayerFrame\Contracts\DBStorage\IDBStorage;
 use Cyberma\LayerFrame\Contracts\ModelMaps\IModelMap;
 use Cyberma\LayerFrame\Contracts\Models\IModel;
+use Cyberma\LayerFrame\Contracts\Models\IModelContext;
+use Cyberma\LayerFrame\Contracts\Models\IModelContextFactory;
+use Cyberma\LayerFrame\Contracts\Models\IModelFactory;
 use Cyberma\LayerFrame\Contracts\Repositories\IRepository;
 use Cyberma\LayerFrame\Exceptions\CodeException;
 use Illuminate\Support\Collection;
@@ -19,12 +22,34 @@ class Repository implements IRepository
 
     protected IModelMap $modelMap;
 
+    protected IModelFactory $modelFactory;
 
-    public function __construct(IDBStorage $dbStorage, IDBMapper $dbMapper, IModelMap $modelMap)
+    protected IModelContextFactory $contextFactory;
+
+    public function __construct(IDBStorage $dbStorage, IDBMapper $dbMapper, IModelMap $modelMap, IModelFactory $modelFactory, ?IModelContextFactory $contextFactory = null)
     {
         $this->dbStorage = $dbStorage;
         $this->dbMapper = $dbMapper;
         $this->modelMap = $modelMap;
+        $this->modelFactory = $modelFactory;
+        $this->contextFactory = $contextFactory;
+    }
+
+
+    protected function makeModel(array $attributes): IModel
+    {
+        if ($this->contextFactory !== null) {
+            $context = $this->makeContext($attributes);
+            return $this->modelFactory->createModel($attributes, $context);
+        }
+
+        // fallback for simple models
+        return $this->modelFactory->createModel($attributes);
+    }
+
+    protected function makeContext(array $attributes): ?IModelContext
+    {
+        return null; // default for simple models
     }
 
     /**
@@ -37,7 +62,13 @@ class Repository implements IRepository
         $columnNames = $this->dbMapper->mapAttributesNamesToColumns($attributes);
         $dbRow = $this->dbStorage->getById($id, $columnNames);
 
-        return $this->dbMapper->demapSingle($dbRow);
+        $attributes = $this->dbMapper->demapSingle($dbRow);
+
+        if ($attributes === null) {
+            return null;
+        }
+
+        return $this->makeModel($attributes);
     }
 
     /**
@@ -65,7 +96,14 @@ class Repository implements IRepository
 
         $dbRows = $this->dbStorage->getByConditions($columnNames, $conditionsColumns, $pagination, $mappedOrderBy);
 
-        return $this->dbMapper->demap($dbRows, $collectionKeyParameter);
+        $attributesCollection = $this->dbMapper->demap($dbRows, $collectionKeyParameter);
+
+        $models = new Collection();
+        foreach ($attributesCollection as $key => $attributesArray) {
+            $models->put($key, $this->makeModel($attributesArray));
+        }
+
+        return $models;
     }
 
     /**
@@ -95,9 +133,14 @@ class Repository implements IRepository
             return null;
         }
 
-        return $this->dbMapper->demapSingle($dbRows[0]);
-    }
+        $attributes = $this->dbMapper->demapSingle($dbRows[0]);
 
+        if ($attributes === null) {
+            return null;
+        }
+
+        return $this->makeModel($attributes);
+    }
 
     /**
      * @param string $keywords
@@ -118,7 +161,14 @@ class Repository implements IRepository
 
         $dbRows = $this->dbStorage->searchInColumns($keywordsAsArray, $searchedColumns, $columnNames, $pagination, $mappedOrderBy);
 
-        return $this->dbMapper->demap($dbRows, $collectionKeyParameter);
+        $attributesCollection = $this->dbMapper->demap($dbRows, $collectionKeyParameter);
+
+        $models = new Collection();
+        foreach ($attributesCollection as $key => $attributesArray) {
+            $models->put($key, $this->makeModel($attributesArray));
+        }
+
+        return $models;
     }
 
     /**
@@ -134,7 +184,13 @@ class Repository implements IRepository
 
         $dbRow = $this->dbStorage->getSingle($whereColumn, $value, $columnNames);
 
-        return $this->dbMapper->demapSingle($dbRow);
+        $attributes = $this->dbMapper->demapSingle($dbRow);
+
+        if ($attributes === null) {
+            return null;
+        }
+
+        return $this->makeModel($attributes);
     }
 
     /**

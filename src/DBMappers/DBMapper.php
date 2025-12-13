@@ -5,7 +5,6 @@ namespace Cyberma\LayerFrame\DBMappers;
 use Cyberma\LayerFrame\Contracts\DBMappers\IDBMapper;
 use Cyberma\LayerFrame\Contracts\ModelMaps\IModelMap;
 use Cyberma\LayerFrame\Contracts\Models\IModel;
-use Cyberma\LayerFrame\Contracts\Models\IModelFactory;
 use Cyberma\LayerFrame\Exceptions\CodeException;
 use Illuminate\Support\Collection;
 
@@ -13,24 +12,15 @@ use Illuminate\Support\Collection;
 class DBMapper implements IDBMapper
 {
 
-    /**
-     * @var IModelMap
-     */
     private IModelMap $modelMap;
-    /**
-     * @var IModelFactory
-     */
-    private IModelFactory $modelFactory;
 
     /**
      * DBMapper constructor.
      * @param IModelMap $modelMap
-     * @param IModelFactory $modelFactory
      */
-    public function __construct(IModelMap $modelMap, IModelFactory $modelFactory)
+    public function __construct(IModelMap $modelMap)
     {
         $this->modelMap = $modelMap;
-        $this->modelFactory = $modelFactory;
     }
 
     /**
@@ -197,52 +187,43 @@ class DBMapper implements IDBMapper
 
     /**
      * @param \stdClass|null $row
-     * @return IModel|null
+     * @return array|null
      */
-    public function demapSingle(?\stdClass $row): ?IModel
+    public function demapSingle(?\stdClass $row): ?array
     {
         if ($row === null) {
             return null;
         }
 
-        $collection = $this->demap([$row]);
+        $row = $this->decodeJsons($row);
+        $attributes = $this->mapColumnsToAttributes($row);
 
-        return $collection->isEmpty()
-            ? null
-            : $collection->first();
+        $attributesCollection = $this->modelMap->doCustomDemapping(collect([$attributes]), $row);
+        
+        return $attributesCollection->first();
     }
 
-    /**
-     * @param Collection|array $rows
-     * @param string|null $collectionKeyParameter
-     * @return Collection
-     */
-    public function demap (Collection|array $rows, ?string $collectionKeyParameter = null) : Collection
-    {
-        $models = new Collection();
 
-        if (empty($rows)) return $models;
+    public function demap(Collection|array $rows, ?string $collectionKeyParameter = null): Collection
+    {
+        $attributesList = new Collection();
 
         foreach ($rows as $row) {
-
             $row = $this->decodeJsons($row);
-
             $attributes = $this->mapColumnsToAttributes($row);
-            $newModel = $this->modelFactory->createModel();  /** @var IModel $newModel */
 
-            $newModel->hydrate($attributes);  //don't mark attributes as dirty
+            // allow custom array-level transformations
+            $attributesCollection = $this->modelMap->doCustomDemapping(collect([$attributes]), $row, $collectionKeyParameter);
+            $attributes = $attributesCollection->first();
 
-            $newModel = $this->modelMap->doCustomDemapping($newModel, $row, $collectionKeyParameter);
-
-            if($collectionKeyParameter === null) {
-                $models->push($newModel);
-            }
-            else {
-                $models->put($newModel->$collectionKeyParameter, $newModel);
+            if ($collectionKeyParameter) {
+                $attributesList->put($attributes[$collectionKeyParameter], $attributes);
+            } else {
+                $attributesList->push($attributes);
             }
         }
 
-        return $models;
+        return $attributesList;
     }
 
     /**

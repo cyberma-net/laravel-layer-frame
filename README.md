@@ -105,7 +105,7 @@ Repositories form the boundary between business logic and persistence.
 
 A Repository uses:
 - ModelMap (attribute → column map)
-- DBMapper (model ↔ DB row mapping)
+- DBMapper (model attributes ↔ DB row mapping)
 - DBStorage (actual SQL operations)
 - ModelFactory (model instantiation)
 
@@ -132,7 +132,7 @@ All without exposing SQL to the Service.
 
 ### DBMapper
 Maps between:
-- Layer Frame Model attribute ↔ SQL column
+- Layer Frame Model attributes ↔ SQL column
 
 Responsibilities:
 - Attribute→column mapping
@@ -273,4 +273,72 @@ Not recommended for tiny CRUD apps — Eloquent is fine there.
 
 ---
 
-Last update: 29th November 2025.
+## 🔷 DOMAIN LAYER
+
+This is your business model of a filesystem.
+
+It includes:
+
+### ✔ Entities (Folder, File, Storage, Permissions)
+
+They:
+- enforce invariants ("folder must belong to storage")
+- have no DB knowledge
+- don't know about filesystem drivers
+- don't know about SQL or JSON
+
+### ✔ Value Objects
+- Path
+- Filetype
+- PermissionSet
+- StorageConfig
+
+### ✔ Domain Services
+- Permission checking
+- Path building
+- Name normalization
+- Storage rules
+- Quota rules
+
+### ✔ Domain Factories
+- FolderFactory
+- FileFactory
+
+Convert attributes + context → domain objects.
+
+### ❌ Domain Rules
+- Domain NEVER talks to DB
+- Domain NEVER calls Laravel's container
+- Domain NEVER performs I/O
+
+
+## 🔷 INFRASTRUCTURE LAYER
+
+This is everything about how and where data is stored or retrieved.
+
+### ✔ DB Mappers
+Convert DB rows → attribute arrays (no business rules, no domain objects)
+
+### ✔ Storage Adapters
+Local disk or S3 are infrastructure concepts.
+
+### ✔ Repositories (in DDD sense)
+Repositories straddle application + infrastructure, but mostly infrastructure:
+- they talk to DB
+- use mappers
+- load storage from DB
+- resolve permissions
+- → then produce full domain models
+
+### ✔ FS Adapters
+Flysystem, local storage, S3 implementations
+
+### ✔ Database Queries and SQL
+
+### ❌ Infrastructure Rules
+- Infrastructure must NOT enforce domain rules
+- (e.g., "user can't access this folder" belongs in domain/application, not DB mapper)
+
+---
+
+Last update: 13th December 2025.

@@ -67,14 +67,14 @@ class ModelMap implements IModelMap
      * doCustomDemapping is called from DBMapper and can be overriden in the child if custom demapping is needed. Columns already contain data after
      * the standard demapping process
      *
-     * @param Collection $models
+     * @param Collection $attributes  key => modelAttributes
      * @param \stdClass $row
      * @param string|null $collectionKeyParameter
-     * @return IModel
+     * @return Collection - return collection even for a single model attribute set
      */
-    public function doCustomDemapping(IModel $model, \stdClass $row, ?string $collectionKeyParameter = null) : IModel
+    public function doCustomDemapping(Collection $attributes, \stdClass $row, ?string $collectionKeyParameter = null) : Collection
     {
-        return $model;
+        return $attributes;
     }
 
     /**

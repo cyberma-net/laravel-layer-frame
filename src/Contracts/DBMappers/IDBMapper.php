@@ -11,16 +11,17 @@ interface IDBMapper
     /**
      * @param IModel $model
      * @param array $attributes
+     * @param array $except
      * @return array
      */
-    public function map(IModel $model, array $attributes = []): array;
+    public function map(IModel $model, array $attributes = [], array $except = []): array;
 
     /**
      * @param Collection|array $rows
      * @param string|null $collectionKeyParameter
      * @return Collection
      */
-    public function demap (Collection $rows, ?string $collectionKeyParameter = null) : Collection;
+    public function demap (Collection|array $rows, ?string $collectionKeyParameter = null) : Collection;
 
     /**
      * @param array $attributes
@@ -31,9 +32,10 @@ interface IDBMapper
     /**
      * @param array $attributes
      * @param array $include
+     * @param bool $applyAliases
      * @return array
      */
-    public function mapAttributesNamesToColumns(array $attributes = [], array $include = []): array;
+    public function mapAttributesNamesToColumns(array $attributes = [], array $include = [], bool $applyAliases = true): array;
 
     /**
      * @param array $columns
@@ -50,9 +52,9 @@ interface IDBMapper
 
     /**
      * @param \stdClass $row
-     * @return IModel|null
+     * @return array|null
      */
-    public function demapSingle (\stdClass $row) : ?IModel;
+    public function demapSingle(?\stdClass $row): ?array;
 
     /**
      * @param array $attributesWithValues
