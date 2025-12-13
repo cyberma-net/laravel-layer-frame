@@ -198,9 +198,9 @@ class DBMapper implements IDBMapper
         $row = $this->decodeJsons($row);
         $attributes = $this->mapColumnsToAttributes($row);
 
-        $attributesCollection = $this->modelMap->doCustomDemapping(collect([$attributes]), $row);
-        
-        return $attributesCollection->first();
+        $attributes = $this->modelMap->doCustomDemapping($attributes, $row);
+
+        return $attributes;
     }
 
 
@@ -213,8 +213,7 @@ class DBMapper implements IDBMapper
             $attributes = $this->mapColumnsToAttributes($row);
 
             // allow custom array-level transformations
-            $attributesCollection = $this->modelMap->doCustomDemapping(collect([$attributes]), $row, $collectionKeyParameter);
-            $attributes = $attributesCollection->first();
+            $attributes = $this->modelMap->doCustomDemapping($attributes, $row);
 
             if ($collectionKeyParameter) {
                 $attributesList->put($attributes[$collectionKeyParameter], $attributes);
@@ -231,7 +230,7 @@ class DBMapper implements IDBMapper
      * @param array $reverseAliases
      * @return array
      */
-    public function mapColumnsToAttributes (\stdClass $row, array $reverseAliases = []) : array
+    public function mapColumnsToAttributes(\stdClass $row, array $reverseAliases = []) : array
     {
         $attributes = [];
         foreach ($this->modelMap->getFullAttributeMap() as $attr => $column) {

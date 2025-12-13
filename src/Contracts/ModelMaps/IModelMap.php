@@ -18,10 +18,9 @@ interface IModelMap
     /**
      * @param array $attributes
      * @param \stdClass $row
-     * @param string|null $collectionKeyParameter
-     * @return IModel
+     * @return array
      */
-    public function doCustomDemapping(Collection $attributes, \stdClass $row, ?string $collectionKeyParameter = null) : Collection;
+    public function doCustomDemapping(array $attributes, \stdClass $row) : array;
 
     /**
      * @param string $code
