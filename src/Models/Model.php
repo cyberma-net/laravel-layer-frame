@@ -51,10 +51,24 @@ class Model implements IModel
      */
     protected function registerAttributes() : void
     {
-        foreach(get_object_vars($this) as $var => $value){
-            if(substr($var, 0, 1) == '_') {
-                $this->attributes[substr($var, 1)] = &$this->$var;
+        $ref = new \ReflectionClass($this);
+
+        foreach ($ref->getProperties() as $prop) {
+
+            $name = $prop->getName();
+            if (!str_starts_with($name, '_')) continue;
+
+            /** @noinspection PhpExpressionResultUnusedInspection */
+            $prop->setAccessible(true);
+
+            try {
+                $value = $prop->getValue($this); // this throws exception if uninitialized typed
+            } catch (\Error $e) {
+                // Uninitialized typed property → treat as null
+                $value = null;
             }
+
+            $this->attributes[substr($name, 1)] = $value;
         }
     }
 
