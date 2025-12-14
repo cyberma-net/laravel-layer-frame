@@ -154,17 +154,34 @@ class Model implements IModel
      */
     public function __set(string $name, $value)
     {
-        if(array_key_exists($name, $this->attributes)) {
+        $internalPropName = '_' . $name;
 
-            if( $this->attributes[$name] !== $value && !array_key_exists($name, $this->originalAttributes)) {   //set originalAttribute only once and if  it has been changed
+        if (!property_exists($this,$internalPropName) && !property_exists($this, $name)) {
+                throw new CodeException('Requested attribute for set does not exist in the class: ' . static::class, '109903', ['attribute' => $name, 'class' => static::class]) ;
+        }
+
+        if(array_key_exists($name, $this->attributes)) {
+            if( !array_key_exists($name, $this->originalAttributes) && $this->attributes[$name] !== $value) {   //set originalAttribute only once and if  it has been changed
                 $this->originalAttributes[$name] = $this->attributes[$name];
             }
 
             $this->attributes[$name] = $value;
+
+            return;
         }
-        else {
-            throw new CodeException('Requested attribute for set does not exist in the class: ' . static::class, '109903', ['attribute' => $name, 'class' => static::class]) ;
+
+        try {
+            $this->$internalPropName = $value;
+        } catch (\TypeError $e) {
+            throw new \TypeError(
+                "Invalid value for attribute '{$name}': {$e->getMessage()}",
+                0,
+                $e
+            );
         }
+
+        // Register reference
+        $this->attributes[$name] = &$this->$internalPropName;
     }
 
     /**
