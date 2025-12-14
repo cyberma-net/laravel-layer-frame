@@ -138,4 +138,12 @@ interface IRepository
 
 
     public function rollbackTransaction();
+
+    public function setContextData(array $contextData): void;
+
+    public function withContext(array $contextData): static;
+
+    public function setContextResolver(callable $resolver): void;
+
+    public function withContextResolver(array $resolver): static;
 }

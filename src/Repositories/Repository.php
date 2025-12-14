@@ -26,6 +26,11 @@ class Repository implements IRepository
 
     protected IModelContextFactory $contextFactory;
 
+    protected ?array $contextData = null;
+
+    /** @var callable|null */
+    protected $contextResolver = null;
+
     public function __construct(IDBStorage $dbStorage, IDBMapper $dbMapper, IModelMap $modelMap, IModelFactory $modelFactory, ?IModelContextFactory $contextFactory = null)
     {
         $this->dbStorage = $dbStorage;
@@ -38,19 +43,52 @@ class Repository implements IRepository
 
     protected function makeModel(array $attributes): IModel
     {
-        if ($this->contextFactory !== null) {
-            $context = $this->makeContext($attributes);
+        // Explicit context set (highest priority)
+        if ($this->contextFactory !== null && $this->contextData !== null) {
+            $context = $this->contextFactory->createModelContext($this->contextData);
             return $this->modelFactory->createModel($attributes, $context);
         }
 
-        // fallback for simple models
+        // Resolver-based context (model-specific, but injected)
+        if ($this->contextFactory !== null && $this->contextResolver !== null) {
+            $contextData = ($this->contextResolver)($attributes);
+
+            if ($contextData !== null) {
+                $context = $this->contextFactory->createModelContext($contextData);
+                return $this->modelFactory->createModel($attributes, $context);
+            }
+        }
+
+        // Fallback
         return $this->modelFactory->createModel($attributes);
     }
 
-    protected function makeContext(array $attributes): ?IModelContext
+
+
+    public function setContextData(array $contextData): void
     {
-        return null; // default for simple models
+        $this->contextData = $contextData;
     }
+
+    public function withContext(array $contextData): static
+    {
+        $this->contextData = $contextData;
+
+        return $this;
+    }
+
+    public function setContextResolver(callable $resolver): void
+    {
+        $this->contextResolver = $resolver;
+    }
+
+    public function withContextResolver(array $resolver): static
+    {
+        $this->contextResolver = $resolver;
+
+        return $this;
+    }
+
 
     /**
      * @param int $id
