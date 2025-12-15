@@ -143,13 +143,7 @@ class DBMapper implements IDBMapper
             if (in_array($col, $forceJsonObjectOnAttributes, true)) {
                 $columns[$col] = json_encode($value, JSON_FORCE_OBJECT);
             } else {
-                // Keep original behavior with minimal risk change:
-                // empty array -> {}, otherwise usual json_encode
-                $json = json_encode($value);
-                if ($json === '[]') {
-                    $json = '{}';
-                }
-                $columns[$col] = $json;
+                $columns[$col] = json_encode($value);
             }
         }
 
