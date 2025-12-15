@@ -85,8 +85,8 @@ interface IRepository
 
     /**
      *
-     * @param array $attributes
      * @param array $conditions
+     * @param array $attributes
      * Format1: [  ['attribute', 'value', 'operator'], ['attribute', 'value', 'operator'] ]
      * Short format for a single cirterium ['attribute', 'value', 'optional operator']
      * Available operators '=' - default - no need to use, '<=', '>=', 'like', 'like%', '%like%', '%like', 'null', 'not null', 'in', 'between'
@@ -96,8 +96,8 @@ interface IRepository
      * @param string $collectionKeyParameter
      * @return Collection
      */
-     public function get(array $attributes = [],
-                        array $conditions = [],
+     public function get(array $conditions = [],
+                        array $attributes = [],
                         array $pagination = [],
                         array $orderBy = [],
                         ?string $collectionKeyParameter = null): Collection;
@@ -114,8 +114,7 @@ interface IRepository
      * @param array $conditions
      * @return IModel
      */
-    public function getFirst(array $attributes = [],
-                             array $conditions = []): ?IModel;
+    public function getFirst(array $conditions = [], array $attributes = []): ?IModel;
 
 
     /**

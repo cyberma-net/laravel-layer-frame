@@ -111,8 +111,8 @@ class Repository implements IRepository
 
     /**
      *
-     * @param array $attributes
      * @param array $conditions
+     * @param array $attributes
      * Format1: [  ['column', 'operator', 'value'], ['column', 'operator', 'value'] ]
      * Short format for a single cirterium ['column', 'optional operator', 'value']
      * Available operators '=' - default - no need to use, '<=', '>=', 'like', 'like%', '%like%', '%like', 'null', 'not null'
@@ -122,11 +122,11 @@ class Repository implements IRepository
      * @param string $collectionKeyParameter - is used, it will make this attribute a key for the collection. E.g. collection of users with key being the ID
      * @return Collection
      */
-    public function get(array $attributes = [],
-                        array $conditions = [],
+    public function get(array $conditions = [],
+                        array $attributes = [],
                         array $pagination = [/*'page' => 1, 'perPage' => 20*/],
                         array $orderBy = [/*'attribute' => 'id', 'order' => 'desc'*/],
-                        string $collectionKeyParameter = null): Collection
+                        ?string $collectionKeyParameter = null): Collection
     {
         $columnNames = $this->dbMapper->mapAttributesNamesToColumns($attributes);
         $conditionsColumns = $this->dbMapper->mapConditionsColumnNames($conditions);
@@ -156,11 +156,11 @@ class Repository implements IRepository
     }
 
     /**
-     * @param array $attributes
      * @param array $conditions
+     * @param array $attributes
      * @return IModel|null
      */
-    public function getFirst(array $attributes = [], array $conditions = []): ?IModel
+    public function getFirst(array $conditions = [], array $attributes = []): ?IModel
     {
         $columnNames = $this->dbMapper->mapAttributesNamesToColumns($attributes);
         $conditionsColumns = $this->dbMapper->mapConditionsColumnNames($conditions);
