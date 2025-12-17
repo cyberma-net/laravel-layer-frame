@@ -198,7 +198,7 @@ class DBMapper implements IDBMapper
     }
 
 
-    public function demap(Collection|array $rows, ?string $collectionKeyParameter = null): Collection
+    public function demap(Collection|array $rows, ?string $collectionKeyAttribute = 'id'): Collection
     {
         $attributesList = new Collection();
 
@@ -209,8 +209,11 @@ class DBMapper implements IDBMapper
             // allow custom array-level transformations
             $attributes = $this->modelMap->doCustomDemapping($attributes, $row);
 
-            if ($collectionKeyParameter) {
-                $attributesList->put($attributes[$collectionKeyParameter], $attributes);
+            // Determine key
+            $key = $collectionKeyParameter ?? ($attributes['id'] ?? null);
+
+            if ($key !== null) {
+                $attributesList->put($key, $attributes);
             } else {
                 $attributesList->push($attributes);
             }

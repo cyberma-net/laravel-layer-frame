@@ -21,7 +21,7 @@ interface IDBMapper
      * @param string|null $collectionKeyParameter
      * @return Collection
      */
-    public function demap (Collection|array $rows, ?string $collectionKeyParameter = null) : Collection;
+    public function demap (Collection|array $rows, ?string $collectionKeyAttribute = 'id') : Collection;
 
     /**
      * @param array $attributes
