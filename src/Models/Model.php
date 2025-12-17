@@ -325,26 +325,41 @@ class Model implements IModel
 
     /**
      * @param string|array $names
-     * @param array $oldValues - ['attributeName' => 'value']
+     * @param mixed $oldValues - ['attributeName' => 'value']
      * @param bool $force
      */
-    public function markDirty(string|array $names, array $oldValues = [], bool $force = false) : void
+    public function markDirty(string|array $names, mixed $oldValues = null, bool $force = false) : void
     {
-        if(!is_array($names)) {
+        // Normalize $names to array
+        if (!is_array($names)) {
             $names = [$names];
         }
 
-        foreach($names as $name) {
-            if($force) {
+        // Normalize $oldValues:
+        // - if scalar/null and only one name → map it to that name
+        // - if array → assume ['attr' => oldValue, ...]
+        if (!is_array($oldValues)) {
+            // Single-name + scalar old value or null
+            $normalizedOldValues = [];
+            if (count($names) === 1) {
+                $normalizedOldValues[$names[0]] = $oldValues;
+            }
+        } else {
+            $normalizedOldValues = $oldValues;
+        }
+
+        foreach ($names as $name) {
+            if ($force) {
+                // force-mark as dirty and discard previous original value
                 $this->originalAttributes[$name] = null;
                 continue;
             }
 
-            if(!array_key_exists($name, $this->originalAttributes)) {  //set originalAttribute only once and keep the oldest value
-                $this->originalAttributes[$name] = isset($oldValues[$name]) ? $oldValues[$name] : null;   //marks attribute as dirty (changed)
+            // Set original attribute only once and keep the oldest value
+            if (!array_key_exists($name, $this->originalAttributes)) {
+                $this->originalAttributes[$name] = $normalizedOldValues[$name] ?? null;
             }
         }
-
     }
 
     /**
