@@ -12,7 +12,15 @@ interface IRepository
 {
     /**
      * @param int $id
-     * @return IModel
+     * @param array $attributes
+     * @return array|null
+     */
+    public function getByIdRaw(int $id, array $attributes = []): ?array;
+
+    /**
+     * @param int $id
+     * @param array $attributes
+     * @return IModel|null
      */
     public function getById(int $id, array $attributes = []): ?IModel;
 
@@ -20,7 +28,15 @@ interface IRepository
      * @param string $attribute
      * @param string|int $value
      * @param array $attributes
-     * @return IModel
+     * @return array|null
+     */
+    public function getSingleRaw(string $attribute, string|int $value, array $attributes = []): ?array;
+
+    /**
+     * @param string $attribute
+     * @param string|int $value
+     * @param array $attributes
+     * @return IModel|null
      */
     public function getSingle(string $attribute, string|int $value, array $attributes = []): ?IModel;
 
@@ -33,7 +49,7 @@ interface IRepository
     /**
      * @param int $id
      * @param bool $permanentDelete
-     * @return int -number of affected arrays
+     * @return int -number of affected rows
      */
     public function deleteById(int $id, bool $permanentDelete = false): int;
 
@@ -47,7 +63,7 @@ interface IRepository
     /**
      * @param array $conditions
      *  Format1: [  ['attribute', 'operator', 'value'], ['attribute', 'operator', 'value',] ]
-     *  Short format for a single cirterium ['attribute', 'optional operator', 'value', ]
+     *  Short format for a single criterion ['attribute', 'optional operator', 'value', ]
      *  Available operators '=' - default - no need to use, '<=', '>=', 'like', 'like%', '%like%', '%like', 'null', 'not null', 'in', 'between'
      *  'date=', 'date>', 'date>=', 'date<=', 'date<', 'in'
      * @param int $limit
@@ -87,35 +103,72 @@ interface IRepository
      *
      * @param array $conditions
      * @param array $attributes
-     * Format1: [  ['attribute', 'value', 'operator'], ['attribute', 'value', 'operator'] ]
-     * Short format for a single cirterium ['attribute', 'value', 'optional operator']
-     * Available operators '=' - default - no need to use, '<=', '>=', 'like', 'like%', '%like%', '%like', 'null', 'not null', 'in', 'between'
-     * 'date=', 'date>', 'date>=', 'date<=', 'date<'*
-     * @param array|string[] $orderBy
+     * Format1: [  ['column', 'operator', 'value'], ['column', 'operator', 'value'] ]
+     * Short format for a single criterion ['column', 'optional operator', 'value']
+     * Available operators '=' - default - no need to use, '<=', '>=', 'like', 'like%', '%like%', '%like', 'null', 'not null'
+     * 'date=', 'date>', 'date>=', 'date<=', 'date<'*, 'between', 'in'
      * @param array|int[] $pagination
-     * @param string $collectionKeyParameter
+     * @param array|string[] $orderBy
+     * @param string $collectionKeyParameter - is used, it will make this attribute a key for the collection. E.g. collection of users with key being the ID
+     * @return Collection
+     */
+    public function getRaw(array $conditions = [],
+                        array $attributes = [],
+                        array $pagination = [/*'page' => 1, 'perPage' => 20*/],
+                        array $orderBy = [/*'attribute' => 'id', 'order' => 'desc'*/],
+                        ?string $collectionKeyParameter = null): Collection;
+
+    /**
+     *
+     * @param array $conditions
+     * @param array $attributes
+     * Format1: [  ['column', 'operator', 'value'], ['column', 'operator', 'value'] ]
+     * Short format for a single criterion ['column', 'optional operator', 'value']
+     * Available operators '=' - default - no need to use, '<=', '>=', 'like', 'like%', '%like%', '%like', 'null', 'not null'
+     * 'date=', 'date>', 'date>=', 'date<=', 'date<'*, 'between', 'in'
+     * @param array|int[] $pagination
+     * @param array|string[] $orderBy
+     * @param string $collectionKeyParameter - is used, it will make this attribute a key for the collection. E.g. collection of users with key being the ID
      * @return Collection
      */
      public function get(array $conditions = [],
                         array $attributes = [],
-                        array $pagination = [],
-                        array $orderBy = [],
+                        array $pagination = [/*'page' => 1, 'perPage' => 20*/],
+                        array $orderBy = [/*'attribute' => 'id', 'order' => 'desc'*/],
                         ?string $collectionKeyParameter = null): Collection;
 
     /**
-     * @param array $attributes
      * @param array $conditions
      * @return int
      */
     public function getCount(array $conditions = []): int;
 
     /**
-     * @param array $attributes
      * @param array $conditions
-     * @return IModel
+     * @param array $attributes
+     * @return array|null
+     */
+    public function getFirstRaw(array $conditions = [], array $attributes = []): ?array;
+
+    /**
+     * @param array $conditions
+     * @param array $attributes
+     * @return IModel|null
      */
     public function getFirst(array $conditions = [], array $attributes = []): ?IModel;
 
+
+    /**
+     * @param string $keywords
+     * @param array $searchedAttributes
+     * @param array $attributes
+     * @param array $pagination
+     * @param array $orderBy
+     * @param string|null $collectionKeyParameter
+     * @return Collection
+     */
+    public function searchInAttributesRaw(string $keywords, array $searchedAttributes, array $attributes = [],
+                                       array  $pagination = [], array $orderBy = [], ?string $collectionKeyParameter = null): Collection;
 
     /**
      * @param string $keywords
@@ -130,19 +183,49 @@ interface IRepository
                                        array  $pagination = [], array $orderBy = [], ?string $collectionKeyParameter = null): Collection;
 
 
+    /**
+     * Begin a database transaction
+     * @return void
+     */
     public function beginTransaction();
 
-
+    /**
+     * Commit the active database transaction
+     * @return void
+     */
     public function commitTransaction();
 
-
+    /**
+     * Rollback the active database transaction
+     * @return void
+     */
     public function rollbackTransaction();
 
+    /**
+     * Set context data for model creation
+     * @param array $contextData
+     * @return void
+     */
     public function setContextData(array $contextData): void;
 
+    /**
+     * Set context data and return the repository instance for method chaining
+     * @param array $contextData
+     * @return static
+     */
     public function withContext(array $contextData): static;
 
+    /**
+     * Set a callable resolver for context data based on model attributes
+     * @param callable $resolver
+     * @return void
+     */
     public function setContextResolver(callable $resolver): void;
 
-    public function withContextResolver(array $resolver): static;
+    /**
+     * Set a callable resolver for context data and return the repository instance for method chaining
+     * @param callable $resolver
+     * @return static
+     */
+    public function withContextResolver(callable $resolver): static;
 }

@@ -210,7 +210,7 @@ class DBMapper implements IDBMapper
             $attributes = $this->modelMap->doCustomDemapping($attributes, $row);
 
             // Determine key
-            $key = $collectionKeyParameter ?? ($attributes['id'] ?? null);
+            $key = $collectionKeyAttribute ?? ($attributes['id'] ?? null);
 
             if ($key !== null) {
                 $attributesList->put($key, $attributes);

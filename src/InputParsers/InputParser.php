@@ -1,6 +1,6 @@
 <?php
 
-namespace  Cyberma\LayerFrame\InputParsers;
+namespace Cyberma\LayerFrame\InputParsers;
 
 use Cyberma\LayerFrame\Contracts\InputModels\IInputModel;
 use Cyberma\LayerFrame\Contracts\InputParsers\IInputParser;

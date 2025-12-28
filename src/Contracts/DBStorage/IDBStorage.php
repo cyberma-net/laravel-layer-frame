@@ -58,11 +58,11 @@ interface IDBStorage
      * @param array $keywords
      * @param array $searchedColumns
      * @param array $columnsNames
-     * @param array $orderBy
      * @param array $pagination
+     * @param array $orderBy
      * @return Collection
      */
-    public function searchInColumns(array $keywords, array $searchedColumns, $columnsNames = [],
+    public function searchInColumns(array $keywords, array $searchedColumns, array $columnsNames = [],
                                        array $pagination = [], array $orderBy = []): Collection;
 
     /**
@@ -91,21 +91,21 @@ interface IDBStorage
 
     /**
      * @param Builder $query
-     * @return stdClass
+     * @return stdClass|null
      */
     public function first(Builder $query): ?StdClass;
 
     /**
      * @param int $id
      * @param array $columnsNames
-     * @return stdClass
+     * @return stdClass|null
      */
     public function getById(int $id, array $columnsNames = []): ?StdClass;
 
     /**
      * @param array $primaryKeyColumns
      * @param array $columnsNames
-     * @return stdClass
+     * @return stdClass|null
      */
     public function getByPrimaryKey(array $primaryKeyColumns, array $columnsNames = []): ?StdClass;
 
@@ -113,7 +113,7 @@ interface IDBStorage
      * @param string $column
      * @param string|int $value
      * @param array $columnsNames
-     * @return stdClass
+     * @return stdClass|null
      */
     public function getSingle(string $column, string|int $value, array $columnsNames = []): ?StdClass;
 
@@ -160,7 +160,7 @@ interface IDBStorage
     /**
      * @param array $conditions
      *  Format1: [  ['column', 'operator', 'value'], ['column', 'operator', 'value',] ]
-     *  Short format for a single cirterium ['column', 'optional operator', 'value', ]
+     *  Short format for a single criterion ['column', 'optional operator', 'value', ]
      *  Available operators '=' - default - no need to use, '<=', '>=', 'like', 'like%', '%like%', '%like', 'null', 'not null', 'in', 'between'
      *  'date=', 'date>', 'date>=', 'date<=', 'date<', 'in'
      * @param int $limit
@@ -187,7 +187,7 @@ interface IDBStorage
      * @param array $columnsNames
      * @param array $conditions
      *  Format1: [  ['column', 'operator', 'value'], ['column', 'operator', 'value',] ]
-     *  Short format for a single cirterium ['column', 'optional operator', 'value', ]
+     *  Short format for a single criterion ['column', 'optional operator', 'value', ]
      *  Available operators '=' - default - no need to use, '<=', '>=', 'like', 'like%', '%like%', '%like', 'null', 'not null', 'in', 'between'
      *  'date=', 'date>', 'date>=', 'date<=', 'date<', 'in'
      * @return int
@@ -207,12 +207,22 @@ interface IDBStorage
     public function normalizeConditions(array $conditions): array;
 
 
+    /**
+     * Begin a database transaction
+     * @return void
+     */
     public function beginTransaction();
 
-
+    /**
+     * Commit the active database transaction
+     * @return void
+     */
     public function commitTransaction();
 
-
+    /**
+     * Rollback the active database transaction
+     * @return void
+     */
     public function rollbackTransaction();
 
 }

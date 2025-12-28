@@ -47,7 +47,7 @@ class Language
             case 'allLangs' : return $this->allLangs; break;
 
             default :
-                throw new CodeException('Requested attribute $'. $attr . ' does not exist in the class: ' . self::class, 'lf2113',  ['class' => static::class]) ;
+                throw new CodeException('Requested attribute $'. $attr . ' does not exist in the class: ' . static::class, 'lf2113',  ['class' => static::class]) ;
         }
     }
 

@@ -69,7 +69,7 @@ class DBStorage implements IDBStorage
      * @param array $columnsNames
      * @param array $conditions
      * Format1: [  ['column', 'operator', 'value'], ['column', 'operator', 'value'] ]
-     * Short format for a single cirterium ['column', 'optional operator', 'value']
+     * Short format for a single criterion ['column', 'optional operator', 'value']
      * Available operators '=' - default - no need to use, '<=', '>=', 'like', 'like%', '%like%', '%like', 'null', 'not null'
      * 'date=', 'date>', 'date>=', 'date<=', 'date<'
      * @param array|int[] $pagination
@@ -522,11 +522,11 @@ class DBStorage implements IDBStorage
     /**
      * @param array $columns
      * @param string $primaryKeyColumn
-     * @return bool
+     * @return int
      * @throws Exception
      * @throws \Cyberma\LayerFrame\Exceptions\CodeException
      */
-    protected function updateByPrimaryKey(array $columns, string $primaryKeyColumn) : bool
+    protected function updateByPrimaryKey(array $columns, string $primaryKeyColumn) : int
     {
         // Basic validation: we MUST have the primary key
         if (!array_key_exists($primaryKeyColumn, $columns)) {

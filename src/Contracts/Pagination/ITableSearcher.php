@@ -4,17 +4,23 @@ namespace Cyberma\LayerFrame\Contracts\Pagination;
 
 interface ITableSearcher
 {
-    public static function getAllowedSearchOperators();
-
     /**
-     * @param int $page
-     * @param int $perPage
-     * @param string $sortBy
-     * @param string $sortDirection
+     * Get all allowed search operators
+     * @return array
      */
-    public function setSearcher(string $searchAt, string $searchFor, string $operator = 'eq');
+    public static function getAllowedSearchOperators(): array;
 
     /**
+     * Set search parameters
+     * @param string $searchAt The attribute/column to search in
+     * @param string $searchFor The value to search for
+     * @param string $operator The search operator (default: 'eq')
+     * @return void
+     */
+    public function setSearcher(string $searchAt, string $searchFor, string $operator = 'eq'): void;
+
+    /**
+     * Get the search conditions as an array
      * @return array
      */
     public function getConditions(): array;

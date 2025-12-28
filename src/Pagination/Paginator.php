@@ -90,7 +90,7 @@ class Paginator implements IPaginator
                 return ($this->page -1) * $this->perPage;
         }
 
-        throw new CodeException('Requested attribute $'. $name . ' does not exist in the class: ' . self::class, 'lf2116', ['class' => static::class]) ;
+        throw new CodeException('Requested attribute $'. $name . ' does not exist in the class: ' . static::class, 'lf2116', ['class' => static::class]) ;
     }
 
     /**
@@ -123,7 +123,7 @@ class Paginator implements IPaginator
                 break;
 
             default:
-                throw new CodeException('Requested attribute $'. $name . ' does not exist in the class: ' . self::class, 'lf2116', ['class' => static::class]) ;
+                throw new CodeException('Requested attribute $'. $name . ' does not exist in the class: ' . static::class, 'lf2116', ['class' => static::class]) ;
         }
     }
 

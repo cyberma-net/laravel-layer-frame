@@ -13,12 +13,13 @@ interface IDBMapper
      * @param array $attributes
      * @param array $except
      * @return array
+     * @throws \Cyberma\LayerFrame\Exceptions\CodeException
      */
     public function map(IModel $model, array $attributes = [], array $except = []): array;
 
     /**
      * @param Collection|array $rows
-     * @param string|null $collectionKeyParameter
+     * @param string|null $collectionKeyAttribute
      * @return Collection
      */
     public function demap (Collection|array $rows, ?string $collectionKeyAttribute = 'id') : Collection;
@@ -64,6 +65,7 @@ interface IDBMapper
     /**
      * @param array $conditions
      * @return array
+     * @throws \Cyberma\LayerFrame\Exceptions\CodeException
      */
     public function mapConditionsColumnNames(array $conditions): array;
 
@@ -75,14 +77,15 @@ interface IDBMapper
     public function mapColumnsToAttributes (\stdClass $row, array $reverseAliases = []) : array;
 
     /**
-     * @param $orderBy
+     * @param array $orderBy
      * @return array
      */
-    public function mapOrderBy($orderBy = []): array;
+    public function mapOrderBy(array $orderBy = []): array;
 
     /**
      * @param string $attributeName
      * @return string
+     * @throws \Cyberma\LayerFrame\Exceptions\CodeException
      */
     public function mapAttributeNameToColumn(string $attributeName): string;
 }

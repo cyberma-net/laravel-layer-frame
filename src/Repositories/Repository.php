@@ -6,7 +6,6 @@ use Cyberma\LayerFrame\Contracts\DBMappers\IDBMapper;
 use Cyberma\LayerFrame\Contracts\DBStorage\IDBStorage;
 use Cyberma\LayerFrame\Contracts\ModelMaps\IModelMap;
 use Cyberma\LayerFrame\Contracts\Models\IModel;
-use Cyberma\LayerFrame\Contracts\Models\IModelContext;
 use Cyberma\LayerFrame\Contracts\Models\IModelContextFactory;
 use Cyberma\LayerFrame\Contracts\Models\IModelFactory;
 use Cyberma\LayerFrame\Contracts\Repositories\IRepository;
@@ -31,7 +30,8 @@ class Repository implements IRepository
     /** @var callable|null */
     protected $contextResolver = null;
 
-    public function __construct(IDBStorage $dbStorage, IDBMapper $dbMapper, IModelMap $modelMap, IModelFactory $modelFactory, ?IModelContextFactory $contextFactory = null)
+
+    public function __construct(IDBStorage $dbStorage, IDBMapper $dbMapper, IModelMap $modelMap, ?IModelFactory $modelFactory, ?IModelContextFactory $contextFactory = null)
     {
         $this->dbStorage = $dbStorage;
         $this->dbMapper = $dbMapper;
@@ -64,7 +64,6 @@ class Repository implements IRepository
     }
 
 
-
     public function setContextData(array $contextData): void
     {
         $this->contextData = $contextData;
@@ -82,7 +81,7 @@ class Repository implements IRepository
         $this->contextResolver = $resolver;
     }
 
-    public function withContextResolver(array $resolver): static
+    public function withContextResolver(callable $resolver): static
     {
         $this->contextResolver = $resolver;
 
@@ -92,20 +91,31 @@ class Repository implements IRepository
     /**
      * @param int $id
      * @param array $attributes
-     * @return IModel|null
+     * @return array
      */
-    public function getById(int $id, array $attributes = []): ?IModel
+    public function getByIdRaw(int $id, array $attributes = []): ?array
     {
         $columnNames = $this->dbMapper->mapAttributesNamesToColumns($attributes);
         $dbRow = $this->dbStorage->getById($id, $columnNames);
 
-        $attributes = $this->dbMapper->demapSingle($dbRow);
+        $modelAttributes = $this->dbMapper->demapSingle($dbRow);
 
-        if ($attributes === null) {
+        return $modelAttributes;
+    }
+
+    /**
+     * @param int $id
+     * @param array $attributes
+     * @return IModel|null
+     */
+    public function getById(int $id, array $attributes = []): ?IModel
+    {
+        $modelAttributes = $this->getByIdRaw($id, $attributes);
+        if ($modelAttributes === null) {
             return null;
         }
 
-        return $this->makeModel($attributes);
+        return $this->makeModel($modelAttributes);
     }
 
     /**
@@ -113,7 +123,35 @@ class Repository implements IRepository
      * @param array $conditions
      * @param array $attributes
      * Format1: [  ['column', 'operator', 'value'], ['column', 'operator', 'value'] ]
-     * Short format for a single cirterium ['column', 'optional operator', 'value']
+     * Short format for a single criterion ['column', 'optional operator', 'value']
+     * Available operators '=' - default - no need to use, '<=', '>=', 'like', 'like%', '%like%', '%like', 'null', 'not null'
+     * 'date=', 'date>', 'date>=', 'date<=', 'date<'*, 'between', 'in'
+     * @param array|int[] $pagination
+     * @param array|string[] $orderBy
+     * @param string $collectionKeyParameter - is used, it will make this attribute a key for the collection. E.g. collection of users with key being the ID
+     * @return Collection
+     */
+    public function getRaw(array $conditions = [],
+                        array $attributes = [],
+                        array $pagination = [/*'page' => 1, 'perPage' => 20*/],
+                        array $orderBy = [/*'attribute' => 'id', 'order' => 'desc'*/],
+                        ?string $collectionKeyParameter = null): Collection
+    {
+        $columnNames = $this->dbMapper->mapAttributesNamesToColumns($attributes);
+        $conditionsColumns = $this->dbMapper->mapConditionsColumnNames($conditions);
+        $mappedOrderBy = $this->dbMapper->mapOrderBy($orderBy);
+
+        $dbRows = $this->dbStorage->getByConditions($columnNames, $conditionsColumns, $pagination, $mappedOrderBy);
+
+        return $this->dbMapper->demap($dbRows, $collectionKeyParameter);
+    }
+
+    /**
+     *
+     * @param array $conditions
+     * @param array $attributes
+     * Format1: [  ['column', 'operator', 'value'], ['column', 'operator', 'value'] ]
+     * Short format for a single criterion ['column', 'optional operator', 'value']
      * Available operators '=' - default - no need to use, '<=', '>=', 'like', 'like%', '%like%', '%like', 'null', 'not null'
      * 'date=', 'date>', 'date>=', 'date<=', 'date<'*, 'between', 'in'
      * @param array|int[] $pagination
@@ -127,16 +165,10 @@ class Repository implements IRepository
                         array $orderBy = [/*'attribute' => 'id', 'order' => 'desc'*/],
                         ?string $collectionKeyParameter = null): Collection
     {
-        $columnNames = $this->dbMapper->mapAttributesNamesToColumns($attributes);
-        $conditionsColumns = $this->dbMapper->mapConditionsColumnNames($conditions);
-        $mappedOrderBy = $this->dbMapper->mapOrderBy($orderBy);
-
-        $dbRows = $this->dbStorage->getByConditions($columnNames, $conditionsColumns, $pagination, $mappedOrderBy);
-
-        $attributesCollection = $this->dbMapper->demap($dbRows, $collectionKeyParameter);
+        $modelAttributes = $this->getRaw($conditions, $attributes, $pagination, $orderBy, $collectionKeyParameter);
 
         $models = new Collection();
-        foreach ($attributesCollection as $key => $attributesArray) {
+        foreach ($modelAttributes as $key => $attributesArray) {
             $models->put($key, $this->makeModel($attributesArray));
         }
 
@@ -157,9 +189,9 @@ class Repository implements IRepository
     /**
      * @param array $conditions
      * @param array $attributes
-     * @return IModel|null
+     * @return array|null
      */
-    public function getFirst(array $conditions = [], array $attributes = []): ?IModel
+    public function getFirstRaw(array $conditions = [], array $attributes = []): ?array
     {
         $columnNames = $this->dbMapper->mapAttributesNamesToColumns($attributes);
         $conditionsColumns = $this->dbMapper->mapConditionsColumnNames($conditions);
@@ -167,16 +199,47 @@ class Repository implements IRepository
         $dbRows = $this->dbStorage->getByConditions($columnNames, $conditionsColumns, ['perPage' => 1]);
 
         if($dbRows->isEmpty()) {
+            return [];
+        }
+
+        return $this->dbMapper->demapSingle($dbRows[0]);
+    }
+
+    /**
+     * @param array $conditions
+     * @param array $attributes
+     * @return IModel|null
+     */
+    public function getFirst(array $conditions = [], array $attributes = []): ?IModel
+    {
+        $modelAttributes = $this->getFirstRaw($conditions, $attributes);
+        if ($modelAttributes === null) {
             return null;
         }
 
-        $attributes = $this->dbMapper->demapSingle($dbRows[0]);
+        return $this->makeModel($modelAttributes);
+    }
 
-        if ($attributes === null) {
-            return null;
-        }
+    /**
+     * @param string $keywords
+     * @param array $searchedAttributes
+     * @param array $attributes
+     * @param array $pagination
+     * @param array $orderBy
+     * @param string|null $collectionKeyParameter
+     * @return Collection
+     */
+    public function searchInAttributesRaw(string $keywords, array $searchedAttributes, array $attributes = [],
+                                       array  $pagination = [], array $orderBy = [], ?string $collectionKeyParameter = null): Collection
+    {
+        $columnNames = $this->dbMapper->mapAttributesNamesToColumns($attributes);
+        $searchedColumns = $this->dbMapper->mapAttributesNamesToColumns($searchedAttributes, [], false);
+        $keywordsAsArray = explode(' ', $keywords);
+        $mappedOrderBy = $this->dbMapper->mapOrderBy($orderBy);
 
-        return $this->makeModel($attributes);
+        $dbRows = $this->dbStorage->searchInColumns($keywordsAsArray, $searchedColumns, $columnNames, $pagination, $mappedOrderBy);
+
+        return $this->dbMapper->demap($dbRows, $collectionKeyParameter);
     }
 
     /**
@@ -191,17 +254,10 @@ class Repository implements IRepository
     public function searchInAttributes(string $keywords, array $searchedAttributes, array $attributes = [],
                                        array  $pagination = [], array $orderBy = [], ?string $collectionKeyParameter = null): Collection
     {
-        $columnNames = $this->dbMapper->mapAttributesNamesToColumns($attributes);
-        $searchedColumns = $this->dbMapper->mapAttributesNamesToColumns($searchedAttributes, [], false);
-        $keywordsAsArray = explode(' ', $keywords);
-        $mappedOrderBy = $this->dbMapper->mapOrderBy($orderBy);
-
-        $dbRows = $this->dbStorage->searchInColumns($keywordsAsArray, $searchedColumns, $columnNames, $pagination, $mappedOrderBy);
-
-        $attributesCollection = $this->dbMapper->demap($dbRows, $collectionKeyParameter);
+        $modelAttributes = $this->searchInAttributesRaw($keywords, $searchedAttributes, $attributes, $pagination, $orderBy, $collectionKeyParameter);
 
         $models = new Collection();
-        foreach ($attributesCollection as $key => $attributesArray) {
+        foreach ($modelAttributes as $key => $attributesArray) {
             $models->put($key, $this->makeModel($attributesArray));
         }
 
@@ -212,22 +268,32 @@ class Repository implements IRepository
      * @param string $attribute
      * @param string|int $value
      * @param array $attributes
-     * @return IModel
+     * @return array
      */
-    public function getSingle(string $attribute, string|int $value, array $attributes = []): ?IModel
+    public function getSingleRaw(string $attribute, string|int $value, array $attributes = []): ?array
     {
         $columnNames = $this->dbMapper->mapAttributesNamesToColumns($attributes);
         $whereColumn = $this->dbMapper->mapAttributeNameToColumn($attribute);
 
         $dbRow = $this->dbStorage->getSingle($whereColumn, $value, $columnNames);
 
-        $attributes = $this->dbMapper->demapSingle($dbRow);
+        return $this->dbMapper->demapSingle($dbRow);
+    }
 
-        if ($attributes === null) {
+    /**
+     * @param string $attribute
+     * @param string|int $value
+     * @param array $attributes
+     * @return IModel
+     */
+    public function getSingle(string $attribute, string|int $value, array $attributes = []): ?IModel
+    {
+        $modelAttributes = $this->getSingleRaw($attribute, $value, $attributes);
+        if ($modelAttributes === null) {
             return null;
         }
 
-        return $this->makeModel($attributes);
+        return $this->makeModel($modelAttributes);
     }
 
     /**
@@ -291,7 +357,7 @@ class Repository implements IRepository
     /**
      * @param array $conditions
      *  Format1: [  ['attribute', 'operator', 'value'], ['attribute', 'operator', 'value',] ]
-     *  Short format for a single cirterium ['attribute', 'optional operator', 'value', ]
+     *  Short format for a single criterion ['attribute', 'optional operator', 'value', ]
      *  Available operators '=' - default - no need to use, '<=', '>=', 'like', 'like%', '%like%', '%like', 'null', 'not null', 'in', 'between'
      *  'date=', 'date>', 'date>=', 'date<=', 'date<', 'in'
      * @param int $limit
