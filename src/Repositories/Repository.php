@@ -10,6 +10,7 @@ use Cyberma\LayerFrame\Contracts\Models\IModelContextFactory;
 use Cyberma\LayerFrame\Contracts\Models\IModelFactory;
 use Cyberma\LayerFrame\Contracts\Repositories\IRepository;
 use Cyberma\LayerFrame\Exceptions\CodeException;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 
@@ -302,6 +303,8 @@ class Repository implements IRepository
      */
     public function store(IModel $model): IModel
     {
+        $this->addTimeStamps($model);
+
         $columns = $this->dbMapper->map($model);
 
         $columns = $this->dbStorage->store($columns);
@@ -309,6 +312,17 @@ class Repository implements IRepository
         // set primary key, usually ID
         foreach($this->modelMap->getPrimaryKey() as $key) {
             $model->{$key} = $columns[$this->dbMapper->mapAttributeNameToColumn($key)];
+        }
+
+        // Set timestamps on model
+        if($this->modelMap->hasTimeStamps()) {
+            if(array_key_exists('created_at', $columns)) {
+                $model->createdAt = $columns['created_at'];
+            }
+
+            if(array_key_exists('updated_at', $columns)) {
+                $model->updatedAt = $columns['updated_at'];
+            }
         }
 
         $model->resetDirty();
@@ -382,7 +396,6 @@ class Repository implements IRepository
     public function patchById(IModel $model, array $selectedAttributes): int
     {
         $primaryKey = $this->modelMap->getPrimaryKey();
-
         foreach($primaryKey as $key) {
             if (!in_array($key, $selectedAttributes)) {
                 $selectedAttributes[] = $key;
@@ -396,11 +409,20 @@ class Repository implements IRepository
             }
         }
 
+        $this->addTimeStamps($model);
+
         $columns = $this->dbMapper->map($model, $selectedAttributes);
+
+        // Add updated_at timestamp before patching
+        if($this->modelMap->hasTimeStamps()) {
+            $columns['updated_at'] = Carbon::now()->toDateTimeString();
+        }
+
+        $affected = $this->dbStorage->patchById($columns);
 
         $model->resetDirty($selectedAttributes);
 
-        return $this->dbStorage->patchById($columns);
+        return $affected;
     }
 
     /**
@@ -413,6 +435,8 @@ class Repository implements IRepository
      */
     public function patchByConditions(IModel $model, array $selectedAttributes, array $conditions): int
     {
+        $this->addTimeStamps($model);
+
         $columns = $this->dbMapper->map($model, $selectedAttributes);
         $conditionsColumns = $this->dbMapper->mapConditionsColumnNames($conditions);
 
@@ -437,5 +461,32 @@ class Repository implements IRepository
     public function rollbackTransaction()
     {
         $this->dbStorage->rollbackTransaction();
+    }
+
+    /**
+     * Add timestamps to columns array
+     * @param IModel $model - optional model to check if it's a new record
+     * @return array
+     */
+    protected function addTimeStamps(IModel $model): IModel
+    {
+        if(!$this->modelMap->hasTimeStamps()) {
+            return $model;
+        }
+
+        $now = Carbon::now()->toDateTimeString();
+
+        $model->updatedAt = $now;
+
+        $primaryKey = $this->modelMap->getPrimaryKey();
+
+        // If primary key is not set, then, this is a new model and createdAt has to be set
+        foreach ($primaryKey as $key) {
+            if ($model->$key === null) {
+                $model->createdAt = $now;
+            }
+        }
+
+        return $model;
     }
 }

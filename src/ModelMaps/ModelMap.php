@@ -210,7 +210,7 @@ class ModelMap implements IModelMap
     }
 
     /**
-     * @return string
+     * @return array
      */
     public function getPrimaryKey(): array
     {

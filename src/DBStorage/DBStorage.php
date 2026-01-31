@@ -396,10 +396,6 @@ class DBStorage implements IDBStorage
      */
     public function store(array $columns): array
     {
-        if($this->modelMap->hasTimeStamps()) {
-            $columns = $this->addTimeStamps($columns);
-        }
-
         // Composite primary keys;
         if(!$this->modelMap->isPrimaryAutoIncrement()) {
             return $this->storeByCompositePrimaryKey($columns);
@@ -437,10 +433,6 @@ class DBStorage implements IDBStorage
     {
         $primaryKeyColumns = $this->modelMap->getPrimaryKeyColumns();
         $table = $this->modelMap->getTable();
-
-        if($this->modelMap->hasTimeStamps()) {
-            $columns = $this->addTimeStamps($columns);
-        }
 
         // Build base query for matching PK
         $query = DB::table($table);
@@ -492,12 +484,7 @@ class DBStorage implements IDBStorage
 
         foreach ($columnsSet as $index => $columns) {
 
-            // 1. timestamps
-            if ($this->modelMap->hasTimeStamps()) {
-                $columns = $this->addTimeStamps($columns);
-            }
-
-            // 2. Try UPDATE if PK exists
+            // 1. Try UPDATE if PK exists
             if (array_key_exists($primaryKey, $columns)) {
 
                 $affected = $this->updateByPrimaryKey($columns, $primaryKey);
@@ -561,27 +548,6 @@ class DBStorage implements IDBStorage
     }
 
     /**
-     * @param IModelMap $modelMap
-     * @param array $columns
-     * @return array
-     */
-    protected function addTimeStamps(array $columns): array
-    {
-        $now = Carbon::now()->toDateTimeString();
-        $primaryKey = $this->modelMap->getPrimaryKeyColumns()[0];
-
-        // Always update updated_at
-        $columns['updated_at'] = $now;
-
-        // created_at only when PK missing → new record
-        if (!array_key_exists($primaryKey, $columns)) {
-            $columns['created_at'] = $now;
-        }
-
-        return $columns;
-    }
-
-    /**
      * @param array $columns
      * @param string $table
      * @return int
@@ -632,10 +598,6 @@ class DBStorage implements IDBStorage
         if(count($columns) === 0 || empty($conditions))
             return 0;
 
-        if($this->modelMap->hasTimeStamps()) {
-            $columns['updated_at'] = Carbon::now()->toDateTimeString();
-        }
-
         // Normalize all conditions into [column, operator, value]
         $normalized = $this->normalizeConditions($conditions);
 
@@ -669,10 +631,6 @@ class DBStorage implements IDBStorage
                 ]);
         }
 
-        if($this->modelMap->hasTimeStamps()) {
-            $selectedColumns['updated_at'] = Carbon::now()->toDateTimeString();
-        }
-
         $updatingStatus = $this->updateByPrimaryKey($selectedColumns, $primaryKey);
 
         return $updatingStatus;
@@ -687,10 +645,6 @@ class DBStorage implements IDBStorage
      */
     public function patchByConditions(array $selectedColumns, array $conditions) : int
     {
-        if($this->modelMap->hasTimeStamps()) {
-            $selectedColumns['updated_at'] = Carbon::now()->toDateTimeString();
-        }
-
         $updatingStatus = $this->update($selectedColumns, $conditions);
 
         return $updatingStatus;
