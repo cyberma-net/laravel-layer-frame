@@ -209,8 +209,14 @@ class DBMapper implements IDBMapper
             // allow custom array-level transformations
             $attributes = $this->modelMap->doCustomDemapping($attributes, $row);
 
-            // Determine key
-            $key = $attributes[$collectionKeyAttribute] ?? ($attributes['id'] ?? null);
+            // Determine key without indexing array by null/empty offsets (PHP 8.1+ deprecation)
+            $key = null;
+            if (is_string($collectionKeyAttribute) && $collectionKeyAttribute !== '') {
+                $key = $attributes[$collectionKeyAttribute] ?? null;
+            }
+            if ($key === null) {
+                $key = $attributes['id'] ?? null;
+            }
 
             if ($key !== null) {
                 $attributesList->put($key, $attributes);
@@ -252,14 +258,22 @@ class DBMapper implements IDBMapper
      */
     public function mapConditionsColumnNames(array $conditions): array
     {
-        if(count($conditions) > 0 && is_string(array_values($conditions)[0])) {
+        if (count($conditions) > 0 && is_string(array_values($conditions)[0])) {
             $incomingConditions = $conditions;
             $conditions = [];
             $conditions[] = $incomingConditions;
         }
 
         $modelMap = $this->modelMap->getFullAttributeMap();
-        foreach($conditions as $key => $criterium) {
+        foreach ($conditions as $key => $criterium) {
+            if (!is_array($criterium)) {
+                throw new CodeException(
+                    'Invalid condition format; each condition must be an array.',
+                    'lf2100',
+                    ['criterium' => $criterium]
+                );
+            }
+
             if (!array_key_exists(0, $criterium)) {
                 throw new CodeException(
                     'Invalid condition format; expected [attribute, value] or [attribute, operator, value].',
@@ -268,7 +282,7 @@ class DBMapper implements IDBMapper
                 );
             }
 
-            if(!array_key_exists($criterium[0], $modelMap)) {
+            if (!array_key_exists($criterium[0], $modelMap)) {
                 throw new CodeException('Get by $conditions does not have a correct attribute. Attribute does not exist.', 'lf2101',
                     ['modelMap' => $modelMap, 'attribute' => $criterium[0]]);
             }
@@ -342,9 +356,11 @@ class DBMapper implements IDBMapper
     public function mapOrderBy($orderBy = []): array
     {
         $mappedOrderBy = [];
-        if(is_array($orderBy) && array_key_exists('attribute', $orderBy)) {
+        if (is_array($orderBy) && array_key_exists('attribute', $orderBy)) {
             $mappedOrderBy['column'] = $this->mapAttributeNameToColumn($orderBy['attribute']);
-            $mappedOrderBy['order'] = $orderBy['order'];
+            if (array_key_exists('order', $orderBy)) {
+                $mappedOrderBy['order'] = $orderBy['order'];
+            }
         }
 
         return $mappedOrderBy;

@@ -24,7 +24,7 @@ class Repository implements IRepository
 
     protected IModelFactory $modelFactory;
 
-    protected IModelContextFactory $contextFactory;
+    protected ?IModelContextFactory $contextFactory;
 
     protected ?array $contextData = null;
 
@@ -32,7 +32,7 @@ class Repository implements IRepository
     protected $contextResolver = null;
 
 
-    public function __construct(IDBStorage $dbStorage, IDBMapper $dbMapper, IModelMap $modelMap, ?IModelFactory $modelFactory, ?IModelContextFactory $contextFactory = null)
+    public function __construct(IDBStorage $dbStorage, IDBMapper $dbMapper, IModelMap $modelMap, IModelFactory $modelFactory, ?IModelContextFactory $contextFactory = null)
     {
         $this->dbStorage = $dbStorage;
         $this->dbMapper = $dbMapper;
@@ -200,7 +200,7 @@ class Repository implements IRepository
         $dbRows = $this->dbStorage->getByConditions($columnNames, $conditionsColumns, ['perPage' => 1]);
 
         if($dbRows->isEmpty()) {
-            return [];
+            return null;
         }
 
         return $this->dbMapper->demapSingle($dbRows[0]);
@@ -347,7 +347,17 @@ class Repository implements IRepository
      */
     public function delete(IModel $model, bool $permanentDelete = false): int
     {
-        return $this->deleteById($model->id, $permanentDelete);
+        $primaryKeyAttributes = [];
+        foreach ($this->modelMap->getPrimaryKey() as $key) {
+            $primaryKeyValue = $model->{$key};
+            if ($primaryKeyValue === null) {
+                throw new CodeException("Missing Primary Key");
+            }
+
+            $primaryKeyAttributes[$key] = $primaryKeyValue;
+        }
+
+        return $this->deleteByPrimaryKey($primaryKeyAttributes, $permanentDelete);
     }
 
     /**
@@ -402,7 +412,7 @@ class Repository implements IRepository
             }
 
             if (!isset($model->$key)) {
-                throw new CodeException(_('The model you would like to patch is missing the primary key, or the key is empty.'), 'lf2107',                    [
+                throw new CodeException('The model you would like to patch is missing the primary key, or the key is empty.', 'lf2107', [
                         'model' => get_class($model),
                         'selectedAttributes' => $selectedAttributes
                     ]);

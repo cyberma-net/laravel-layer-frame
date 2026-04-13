@@ -27,11 +27,11 @@ class Model implements IModel
     //     */
        protected $attributes = [];   //filled automatically by recognizing members' names;  $attrName => pointer to var;  id => &$_id
 
-      /**
-       * Tracks original values of dirty attributes
-       *  'id' => 10
-       */
-       protected $originalAttributes = [];    //will be filled with everything that has changed. Used for data updates; Key is set to the !internal! variable name, e.g. _id
+    /**
+     * Tracks original values for dirty attributes.
+     * Example: ['id' => 10]
+     */
+    protected $originalAttributes = [];
 
 
     const DEFAULT_ATTRIBUTES = [];  // internal attrName => defaultValue;  e.g.  '_id' => 1
@@ -51,8 +51,8 @@ class Model implements IModel
      */
     protected function registerAttributes() : void
     {
-        foreach(get_object_vars($this) as $var => $value){
-            if(substr($var, 0, 1) == '_') {
+        foreach (get_object_vars($this) as $var => $value) {
+            if (substr($var, 0, 1) === '_') {
                 $this->attributes[substr($var, 1)] = &$this->$var;
             }
         }
@@ -141,10 +141,11 @@ class Model implements IModel
      */
     public function __get(string $name)
     {
-        if (array_key_exists($name, $this->attributes))
+        if (array_key_exists($name, $this->attributes)) {
             return $this->attributes[$name];
+        }
 
-        throw new CodeException('Requested attribute $'. $name . ' does not exist in the class: ' . static::class, 'lf2114', ['class' => static::class]) ;
+        throw new CodeException('Requested attribute $'. $name . ' does not exist in the class: ' . static::class, 'lf2114', ['class' => static::class]);
     }
 
     /**
@@ -155,13 +156,15 @@ class Model implements IModel
     public function __set(string $name, $value)
     {
         $internalPropName = '_' . $name;
+        $hasRegisteredAttribute = array_key_exists($name, $this->attributes);
+        $hasInternalProperty = property_exists($this, $internalPropName);
 
-        if (!property_exists($this,$internalPropName) && !property_exists($this, $name)) {
-                throw new CodeException('Requested attribute for set does not exist in the class: ' . static::class, '109903', ['attribute' => $name, 'class' => static::class]) ;
+        if (!$hasRegisteredAttribute && !$hasInternalProperty) {
+            throw new CodeException('Requested attribute for set does not exist in the class: ' . static::class, '109903', ['attribute' => $name, 'class' => static::class]);
         }
 
-        if(array_key_exists($name, $this->attributes)) {
-            if( !array_key_exists($name, $this->originalAttributes) && $this->attributes[$name] !== $value) {   //set originalAttribute only once and if  it has been changed
+        if ($hasRegisteredAttribute) {
+            if (!array_key_exists($name, $this->originalAttributes) && $this->attributes[$name] !== $value) { // set originalAttribute only once and if it has been changed
                 $this->originalAttributes[$name] = $this->attributes[$name];
             }
 
@@ -190,7 +193,7 @@ class Model implements IModel
      */
     public function __isset(string $name) : bool
     {
-        return array_key_exists($name, $this->attributes);
+        return isset($this->attributes[$name]);
     }
 
     /**
@@ -199,10 +202,12 @@ class Model implements IModel
      */
     protected function setAttributesToDefault(array $attributes, array $except = []) : void
     {
-        foreach($attributes as $attribute) {
-            if(in_array($attribute, $except)) continue;
+        foreach ($attributes as $attribute) {
+            if (in_array($attribute, $except, true)) {
+                continue;
+            }
 
-            if($this->attributeExists($attribute)) {
+            if ($this->attributeExists($attribute) && array_key_exists($attribute, static::DEFAULT_ATTRIBUTES)) {
                 $this->$attribute = static::DEFAULT_ATTRIBUTES[$attribute];
             }
         }
@@ -222,8 +227,8 @@ class Model implements IModel
      */
     public function resetAttributeToOriginal(string $name)
     {
-        if (isset($this->originalAttributes[$name])) {
-            if(array_key_exists($name, $this->attributes)) {
+        if (array_key_exists($name, $this->originalAttributes)) {
+            if (array_key_exists($name, $this->attributes)) {
                 $this->attributes[$name] = $this->originalAttributes[$name];
             }
         }
