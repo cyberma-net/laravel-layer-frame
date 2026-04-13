@@ -40,5 +40,4 @@ interface IPaginator
      * @return array
      */
     public function getOrderBy(): array;
-
 }

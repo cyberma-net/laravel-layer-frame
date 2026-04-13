@@ -10,7 +10,7 @@ trait JsonData
      * @param string|null $key
      * @return mixed
      */
-    public function getData (string $key = null)
+    public function getData (?string $key = null)
     {
         if(is_null($key))
             return $this->_data;

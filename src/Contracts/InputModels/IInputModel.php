@@ -7,7 +7,6 @@ use Illuminate\Support\MessageBag;
 
 interface IInputModel
 {
-
     /**
      * @param string $fieldName
      * @return bool
@@ -74,5 +73,4 @@ interface IInputModel
     public function getValidationMessages(string $validatedSet) : array;
 
     public function prepareValidationMessages(): array;
-
 }
