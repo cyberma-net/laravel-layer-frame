@@ -3,6 +3,14 @@
 namespace Cyberma\LayerFrame\DBStorage;
 
 use Cyberma\LayerFrame\Contracts\DBStorage\IDBStorage;
+use Cyberma\LayerFrame\DBStorage\Aggregates\AggregateType;
+use Cyberma\LayerFrame\DBStorage\Aggregates\ScalarQuery;
+use Cyberma\LayerFrame\DBStorage\Collections\CollectionQuery;
+use Cyberma\LayerFrame\DBStorage\Columns\ColumnQuery;
+use Cyberma\LayerFrame\DBStorage\Mutations\MutationQuery;
+use Cyberma\LayerFrame\DBStorage\Mutations\MutationType;
+use Cyberma\LayerFrame\DBStorage\Streams\StreamQuery;
+use Cyberma\LayerFrame\DBStorage\Streams\StreamType;
 use Cyberma\LayerFrame\DBStorage\Traits\DBErrors;
 use Cyberma\LayerFrame\Exceptions\CodeException;
 use Cyberma\LayerFrame\Exceptions\Exception;
@@ -94,9 +102,219 @@ class DBStorage implements IDBStorage
      */
     public function countByConditions(array $conditions = []): int
     {
-        $query = $this->queryByConditions($conditions);
+        return (int)$this->executeScalarByConditions($conditions, AggregateType::COUNT);
+    }
 
-        return $query->count();
+    /**
+     * @param array $conditions
+     * @return bool
+     */
+    public function existsByConditions(array $conditions = []): bool
+    {
+        return (bool)$this->executeScalarByConditions($conditions, AggregateType::EXISTS);
+    }
+
+    /**
+     * @param array $conditions
+     * @param string|AggregateType $operation
+     * @param string|null $column
+     * @param array $options
+     * @return int|float|string|bool|null
+     */
+    public function executeScalarByConditions(
+        array $conditions,
+        string|AggregateType $operation,
+        ?string $column = null,
+        array $options = []
+    ): int|float|string|bool|null {
+        $operation = is_string($operation) ? AggregateType::fromString($operation) : $operation;
+        $column = $column !== null ? trim($column) : null;
+        $distinct = (bool)($options['distinct'] ?? false);
+
+        if ($column === '') {
+            throw new \InvalidArgumentException('Scalar execution column cannot be empty.');
+        }
+
+        if ($operation->requiresColumn() && $column === null) {
+            throw new \InvalidArgumentException(sprintf('Aggregate type "%s" requires a target column.', $operation->value));
+        }
+
+        if (!$operation->supportsColumn() && $column !== null) {
+            throw new \InvalidArgumentException(sprintf('Aggregate type "%s" does not support a target column.', $operation->value));
+        }
+
+        // Build a dedicated query without SELECT payload and isolate mutable state.
+        $baseQuery = $this->queryByConditions($conditions, [null]);
+        $execQuery = clone $baseQuery;
+        $execQuery = $this->resetNonScalarState($execQuery);
+
+        if ($distinct) {
+            $execQuery->distinct();
+        }
+
+        return $this->dispatchScalarOperation($execQuery, $operation, $column);
+    }
+
+    /**
+     * @param ScalarQuery $query
+     * @param array $conditions
+     * @return int|float|string|bool|null
+     */
+    public function scalar(ScalarQuery $query, array $conditions = []): int|float|string|bool|null
+    {
+        return $this->executeScalarByConditions($conditions, $query->type, $query->column, [
+            'distinct' => $query->distinct,
+            'alias' => $query->alias,
+        ]);
+    }
+
+    /**
+     * @param CollectionQuery $query
+     * @param array $conditions
+     * @return array
+     */
+    public function collection(CollectionQuery $query, array $conditions = []): array
+    {
+        // Build a dedicated query without SELECT payload to keep execution isolated.
+        $baseQuery = $this->queryByConditions($conditions, [null]);
+        $execQuery = $this->resetNonScalarState(clone $baseQuery);
+
+        if ($query->distinct) {
+            $execQuery->distinct();
+        }
+
+        return $execQuery->pluck($query->valueColumn, $query->keyColumn)->all();
+    }
+
+    /**
+     * @param ColumnQuery $query
+     * @param array $conditions
+     * @return array
+     */
+    public function columnCollection(ColumnQuery $query, array $conditions = []): array
+    {
+        return $this->collection(
+            CollectionQuery::pluck($query->valueColumn, $query->keyColumn, $query->distinct),
+            $conditions
+        );
+    }
+
+    /**
+     * @param MutationQuery $query
+     * @param array $conditions
+     * @return int
+     */
+    public function mutate(MutationQuery $query, array $conditions = []): int
+    {
+        $baseQuery = $this->queryByConditions($conditions, [null]);
+        $execQuery = $this->resetNonScalarState(clone $baseQuery);
+
+        return match ($query->type) {
+            MutationType::UPDATE => empty($conditions) ? 0 : (int)$execQuery->update($query->values),
+            MutationType::DELETE => $this->executeDeleteMutation($execQuery, $query),
+            MutationType::INCREMENT => empty($conditions)
+                ? 0
+                : (int)$execQuery->increment($query->column, $query->amount, $query->values),
+            MutationType::DECREMENT => empty($conditions)
+                ? 0
+                : (int)$execQuery->decrement($query->column, $query->amount, $query->values),
+        };
+    }
+
+    /**
+     * @param StreamQuery $query
+     * @param array $conditions
+     * @return \Generator
+     */
+    public function stream(StreamQuery $query, array $conditions = []): \Generator
+    {
+        $columns = $query->columns === [] ? [] : $query->columns;
+        $baseQuery = $this->queryByConditions($conditions, $columns);
+        $execQuery = clone $baseQuery;
+
+        return match ($query->type) {
+            StreamType::CHUNK => $this->yieldFromIterator($execQuery->lazy($query->chunkSize)),
+            StreamType::CHUNK_BY_ID => $this->yieldFromIterator($execQuery->lazyById($query->chunkSize, $query->idColumn)),
+            StreamType::LAZY => $this->yieldFromIterator($execQuery->lazy($query->chunkSize)),
+            StreamType::CURSOR => $this->yieldFromIterator($execQuery->cursor()),
+        };
+    }
+
+    protected function yieldFromIterator(iterable $rows): \Generator
+    {
+        foreach ($rows as $key => $row) {
+            yield $key => $row;
+        }
+    }
+
+    protected function executeDeleteMutation(Builder $query, MutationQuery $mutationQuery): int
+    {
+        if ($this->modelMap->hasSoftDeletes() && !$mutationQuery->permanentDelete) {
+            return (int)$query
+                ->whereNull('deleted_at')
+                ->limit($mutationQuery->limit)
+                ->update(['deleted_at' => Carbon::now()->toDateTimeString()]);
+        }
+
+        return (int)$query->limit($mutationQuery->limit)->delete();
+    }
+
+    protected function resetNonScalarState(Builder $query): Builder
+    {
+        $query->columns = null;
+        $query->orders = null;
+        $query->groups = null;
+        $query->havings = null;
+        $query->limit = null;
+        $query->offset = null;
+        $query->unions = null;
+        $query->unionLimit = null;
+        $query->unionOffset = null;
+        $query->unionOrders = null;
+        $query->distinct = false;
+
+        return $query;
+    }
+
+    protected function dispatchScalarOperation(Builder $query, AggregateType $operation, ?string $column): int|float|string|bool|null
+    {
+        return match ($operation) {
+            AggregateType::COUNT => $column === null
+                ? (int)$query->count()
+                : (int)$query->count($column),
+            AggregateType::EXISTS => (bool)$query->exists(),
+            AggregateType::SUM => $this->normalizeNumericScalar($query->sum($column)),
+            AggregateType::AVG => $this->normalizeNumericScalar($query->avg($column)),
+            AggregateType::MIN => $this->normalizeValueScalar($query->min($column)),
+            AggregateType::MAX => $this->normalizeValueScalar($query->max($column)),
+            AggregateType::VALUE => $this->normalizeValueScalar($query->value($column)),
+        };
+    }
+
+    protected function normalizeNumericScalar($value): int|float|null
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_int($value) || is_float($value)) {
+            return $value;
+        }
+
+        if (is_string($value) && is_numeric($value)) {
+            return str_contains($value, '.') ? (float)$value : (int)$value;
+        }
+
+        return null;
+    }
+
+    protected function normalizeValueScalar($value): int|float|string|bool|null
+    {
+        if ($value === null || is_bool($value) || is_int($value) || is_float($value) || is_string($value)) {
+            return $value;
+        }
+
+        return null;
     }
 
     /**
@@ -595,24 +813,11 @@ class DBStorage implements IDBStorage
      */
     public function update (array $columns, array $conditions) : int
     {
-        if(count($columns) === 0 || empty($conditions))
+        if (count($columns) === 0 || empty($conditions)) {
             return 0;
-
-        // Normalize all conditions into [column, operator, value]
-        $normalized = $this->normalizeConditions($conditions);
-
-        try {
-            $query = DB::table($this->modelMap->getTable());
-
-            foreach($normalized as [$column, $operator, $value]) {
-                $this->prepareQueryWhere($query, $column, $value, $operator);
-            }
-
-            return $query->update($columns);   //returns number of affected rows
         }
-        catch (QueryException $e) {
-            $this->processSQLerrors($e);
-        }
+
+        return $this->mutate(MutationQuery::update($columns), $conditions);
     }
 
     /**
@@ -745,39 +950,7 @@ class DBStorage implements IDBStorage
      */
     public function deleteByConditions(array $conditions, int $limit = PHP_INT_MAX, bool $permanentDelete = false): int
     {
-        $table = $this->modelMap->getTable();
-        $normalized = $this->normalizeConditions($conditions);
-
-        try {
-            // Build base query without SELECT clause
-            $query = ($permanentDelete)
-                ? DB::table($table)
-                : $this->table([null]); // no SELECT
-
-            // Apply all conditions
-            foreach ($normalized as [$column, $operator, $value]) {
-                $this->prepareQueryWhere($query, $column, $value, $operator);
-            }
-
-            // SOFT DELETE
-            if ($this->modelMap->hasSoftDeletes() && !$permanentDelete) {
-
-                $updatedColumns = [
-                    'deleted_at' => Carbon::now()->toDateTimeString()
-                ];
-
-                return $query
-                    ->whereNull('deleted_at')
-                    ->limit($limit)
-                    ->update($updatedColumns);
-            }
-
-            // HARD DELETE
-            return $query->limit($limit)->delete();
-        }
-        catch (QueryException $e) {
-            $this->processSQLerrors($e);
-        }
+        return $this->mutate(MutationQuery::delete($limit, $permanentDelete), $conditions);
     }
 
     public function beginTransaction()

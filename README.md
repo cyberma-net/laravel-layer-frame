@@ -130,6 +130,194 @@ Repositories support:
 
 All without exposing SQL to the Service.
 
+### Generic Query Execution Architecture
+
+Layer Frame uses typed query DTOs to extend query capabilities without turning repositories into a method-per-query API.
+
+Current separation:
+
+- `EntityQuery` (conceptual): model retrieval + hydration flows
+- `ScalarQuery`: scalar/aggregate values (`count`, `sum`, `avg`, `min`, `max`, `value`, `exists`)
+- `CollectionQuery`: `pluck`-style retrieval without hydration
+- `MutationQuery`: write operations (`update`, `delete`, `increment`, `decrement`)
+- `StreamQuery`: low-memory iteration (`chunk`, `chunkById`, `lazy`, `cursor`)
+
+#### Rationale
+
+Without generic query DTOs, repository/storage APIs quickly grow into method explosion:
+
+- `countByX()`, `existsByX()`, `sumByX()`, `avgByX()`, ...
+- duplicated across contracts, storage, repositories, and tests
+- harder to evolve safely
+
+Typed query DTOs keep the architecture explicit, maintainable, and AI-friendly:
+
+- predictable signatures
+- minimal boilerplate
+- easier code/test generation
+- safer long-term extension
+
+#### Architectural rule: keep repositories semantic
+
+Query DTOs are infrastructure primitives.
+Application/domain repositories should remain semantic services built with composition.
+
+Layer Frame repository architecture guidance:
+
+- prefer composition over inheritance
+- inject `IRepository` (or a concrete LF repository service) into semantic repositories
+- do not build ORM-style repository class trees
+
+Good (composition):
+
+```php
+use Cyberma\LayerFrame\Contracts\Repositories\IRepository;
+use Cyberma\LayerFrame\DBStorage\Aggregates\ScalarQuery;
+
+final class UserRepository
+{
+    public function __construct(
+        private readonly IRepository $repository
+    ) {
+    }
+
+    public function getActiveUserCount(): int
+    {
+        return (int)$this->repository->scalar(
+            ScalarQuery::count(),
+            [['status', '=', 'active']]
+        );
+    }
+}
+```
+
+Avoid exposing raw SQL-style repository APIs in services/controllers.
+Use semantic repository methods for common business use-cases, and generic query DTO execution inside repository services.
+
+#### ScalarQuery examples
+
+```php
+// inside a semantic repository service:
+$count = $this->repository->scalar(ScalarQuery::count(), [['status', '=', 'active']]);
+
+// count(distinct userId)
+$uniqueUsers = $this->repository->scalar(
+    ScalarQuery::count('userId', distinct: true),
+    [['status', '=', 'completed']]
+);
+
+// value(email)
+$email = $this->repository->scalar(ScalarQuery::value('email'), [['id', '=', 10]]);
+```
+
+#### CollectionQuery examples
+
+```php
+// flat array
+$ids = $this->repository->collection(
+    CollectionQuery::ids(),
+    [['status', '=', 'active']]
+);
+
+// key/value map: [id => name]
+$userMap = $this->repository->collection(
+    CollectionQuery::pluck('name', keyColumn: 'id'),
+    [['status', '=', 'active']]
+);
+
+// distinct values
+$statuses = $this->repository->collection(CollectionQuery::distinctColumn('status'));
+```
+
+#### MutationQuery examples
+
+```php
+// update
+$affected = $this->repository->mutate(
+    MutationQuery::update(['status' => 'inactive']),
+    [['lastLoginAt', '<', '2025-01-01']]
+);
+
+// increment
+$updated = $this->repository->mutate(
+    MutationQuery::increment('stock', 5),
+    [['id', '=', 10]]
+);
+```
+
+#### StreamQuery examples
+
+```php
+// AI processing / exports / indexing with low memory usage
+foreach ($this->repository->stream(StreamQuery::lazy(500, ['id', 'email'])) as $row) {
+    // process row
+}
+
+// stable large-table scan
+foreach ($this->repository->stream(StreamQuery::chunkById(1000, 'id', ['id', 'email'])) as $row) {
+    // process row
+}
+```
+
+#### Migration examples
+
+Before:
+
+```php
+$count = $userRepository->getCount([['status', '=', 'active']]);
+```
+
+After:
+
+```php
+$count = (int)$userRepository->scalar(
+    ScalarQuery::count(),
+    [['status', '=', 'active']]
+);
+```
+
+Before (custom method explosion):
+
+```php
+public function getActiveUserEmailList(): array
+{
+    // custom ad-hoc query code
+}
+```
+
+After:
+
+```php
+public function getActiveUserEmailList(): array
+{
+    return $this->collection(
+        CollectionQuery::pluck('email'),
+        [['status', '=', 'active']]
+    );
+}
+```
+
+#### Best practices
+
+- Keep query DTOs typed and immutable.
+- Let repositories map attribute names; do not pass DB column names from services.
+- Prefer semantic repository methods for repeated domain use-cases.
+- Build semantic repositories via composition (`IRepository` injection), not inheritance.
+- Use generic `scalar()`, `collection()`, `mutate()`, `stream()` as internal building blocks.
+- Keep scalar/collection retrieval hydration-free.
+- Keep execution paths isolated (clone builders for scalar/collection/mutation/stream) to avoid mutability bugs.
+- Keep raw SQL contained in DBStorage-level extensions.
+
+#### JSON and analytics extension guidance
+
+MySQL JSON and grouping/having can be added safely when needed, but keep this policy:
+
+- start with typed DTO fields (no raw SQL strings from services)
+- encapsulate SQL details inside DBStorage
+- expose semantic repository methods for domain use-cases
+
+If analytics/query shape is highly specialized, prefer explicit repository methods instead of over-generalizing DTOs.
+
 ### DBMapper
 Maps between:
 - Layer Frame Model attributes ↔ SQL column

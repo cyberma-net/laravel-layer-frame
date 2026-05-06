@@ -2,6 +2,11 @@
 
 namespace Cyberma\LayerFrame\Contracts\DBStorage;
 
+use Cyberma\LayerFrame\DBStorage\Aggregates\ScalarQuery;
+use Cyberma\LayerFrame\DBStorage\Collections\CollectionQuery;
+use Cyberma\LayerFrame\DBStorage\Columns\ColumnQuery;
+use Cyberma\LayerFrame\DBStorage\Mutations\MutationQuery;
+use Cyberma\LayerFrame\DBStorage\Streams\StreamQuery;
 use Cyberma\LayerFrame\Exceptions\CodeException;
 use Cyberma\LayerFrame\Exceptions\Exception;
 use Illuminate\Database\Query\Builder;
@@ -193,6 +198,73 @@ interface IDBStorage
      * @return int
      */
     public function countByConditions(array $conditions = []): int;
+
+    /**
+     * @param array $conditions
+     * @return bool
+     */
+    public function existsByConditions(array $conditions = []): bool;
+
+    /**
+     * Execute scalar/aggregate operation against filtered conditions.
+     *
+     * @param array $conditions
+     * @param string|\\Cyberma\\LayerFrame\\DBStorage\\Aggregates\\AggregateType $operation
+     * @param string|null $column
+     * @param array $options
+     * @return int|float|string|bool|null
+     */
+    public function executeScalarByConditions(
+        array $conditions,
+        string|\Cyberma\LayerFrame\DBStorage\Aggregates\AggregateType $operation,
+        ?string $column = null,
+        array $options = []
+    ): int|float|string|bool|null;
+
+    /**
+     * Execute scalar/aggregate operation against filtered query.
+     *
+     * @param ScalarQuery $query
+     * @param array $conditions
+     * @return int|float|string|bool|null
+     */
+    public function scalar(ScalarQuery $query, array $conditions = []): int|float|string|bool|null;
+
+    /**
+     * Execute collection query (pluck-style retrieval).
+     *
+     * @param CollectionQuery $query
+     * @param array $conditions
+     * @return array
+     */
+    public function collection(CollectionQuery $query, array $conditions = []): array;
+
+    /**
+     * Backward-compatible alias for collection pluck operations.
+     *
+     * @param ColumnQuery $query
+     * @param array $conditions
+     * @return array
+     */
+    public function columnCollection(ColumnQuery $query, array $conditions = []): array;
+
+    /**
+     * Execute generic mutation query.
+     *
+     * @param MutationQuery $query
+     * @param array $conditions
+     * @return int
+     */
+    public function mutate(MutationQuery $query, array $conditions = []): int;
+
+    /**
+     * Execute stream query with low memory footprint.
+     *
+     * @param StreamQuery $query
+     * @param array $conditions
+     * @return \Generator
+     */
+    public function stream(StreamQuery $query, array $conditions = []): \Generator;
 
     /**
      * @param array $condition

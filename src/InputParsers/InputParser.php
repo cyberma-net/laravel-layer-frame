@@ -20,7 +20,6 @@ class InputParser implements IInputParser
      */
     public function parse(IInputModel $inputModel, array $requestData, string $validatedSet, array $additionalInputs = []): IInputModel
     {
-
         if ($requestData === null)  //validator requires an array
             $requestData = [];
 

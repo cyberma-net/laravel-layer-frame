@@ -9,6 +9,14 @@ use Cyberma\LayerFrame\Contracts\Models\IModel;
 use Cyberma\LayerFrame\Contracts\Models\IModelContextFactory;
 use Cyberma\LayerFrame\Contracts\Models\IModelFactory;
 use Cyberma\LayerFrame\Contracts\Repositories\IRepository;
+use Cyberma\LayerFrame\DBStorage\Aggregates\ScalarQuery;
+use Cyberma\LayerFrame\DBStorage\Aggregates\AggregateType;
+use Cyberma\LayerFrame\DBStorage\Collections\CollectionQuery;
+use Cyberma\LayerFrame\DBStorage\Columns\ColumnQuery;
+use Cyberma\LayerFrame\DBStorage\Mutations\MutationQuery;
+use Cyberma\LayerFrame\DBStorage\Mutations\MutationType;
+use Cyberma\LayerFrame\DBStorage\Streams\StreamQuery;
+use Cyberma\LayerFrame\DBStorage\Streams\StreamType;
 use Cyberma\LayerFrame\Exceptions\CodeException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -182,9 +190,123 @@ class Repository implements IRepository
      */
     public function getCount(array $conditions = []): int
     {
-        $conditionsColumns = $this->dbMapper->mapConditionsColumnNames($conditions);
+        return (int)$this->getScalar($conditions, AggregateType::COUNT);
+    }
 
-        return $this->dbStorage->countByConditions($conditionsColumns);
+    /**
+     * @param array $conditions
+     * @param string|AggregateType $operation
+     * @param string|null $attribute
+     * @param array $options
+     * @return int|float|string|bool|null
+     */
+    public function getScalar(
+        array $conditions,
+        string|AggregateType $operation,
+        ?string $attribute = null,
+        array $options = []
+    ): int|float|string|bool|null {
+        $conditionsColumns = $this->dbMapper->mapConditionsColumnNames($conditions);
+        $mappedColumn = $attribute !== null ? $this->dbMapper->mapAttributeNameToColumn($attribute) : null;
+
+        return $this->dbStorage->executeScalarByConditions($conditionsColumns, $operation, $mappedColumn, $options);
+    }
+
+    /**
+     * @param ScalarQuery $query
+     * @param array $conditions
+     * @return int|float|string|bool|null
+     */
+    public function scalar(ScalarQuery $query, array $conditions = []): int|float|string|bool|null
+    {
+        return $this->getScalar($conditions, $query->type, $query->column, [
+            'distinct' => $query->distinct,
+            'alias' => $query->alias,
+        ]);
+    }
+
+    /**
+     * @param ColumnQuery $query
+     * @param array $conditions
+     * @return array
+     */
+    public function columnCollection(ColumnQuery $query, array $conditions = []): array
+    {
+        return $this->collection(
+            CollectionQuery::pluck($query->valueColumn, $query->keyColumn, $query->distinct),
+            $conditions
+        );
+    }
+
+    /**
+     * @param CollectionQuery $query
+     * @param array $conditions
+     * @return array
+     */
+    public function collection(CollectionQuery $query, array $conditions = []): array
+    {
+        $conditionsColumns = $this->dbMapper->mapConditionsColumnNames($conditions);
+        $mappedValueColumn = $this->dbMapper->mapAttributeNameToColumn($query->valueColumn);
+        $mappedKeyColumn = $query->keyColumn !== null
+            ? $this->dbMapper->mapAttributeNameToColumn($query->keyColumn)
+            : null;
+
+        $mappedQuery = CollectionQuery::pluck($mappedValueColumn, $mappedKeyColumn, $query->distinct);
+
+        return $this->dbStorage->collection($mappedQuery, $conditionsColumns);
+    }
+
+    /**
+     * @param MutationQuery $query
+     * @param array $conditions
+     * @return int
+     */
+    public function mutate(MutationQuery $query, array $conditions = []): int
+    {
+        $conditionsColumns = $this->dbMapper->mapConditionsColumnNames($conditions);
+        $mappedColumn = $query->column !== null ? $this->dbMapper->mapAttributeNameToColumn($query->column) : null;
+        $mappedValues = $query->type === MutationType::UPDATE
+            ? $this->dbMapper->mapAttributesToColumns($query->values)
+            : $this->mapMutationValues($query->values);
+
+        $mappedQuery = match ($query->type) {
+            MutationType::UPDATE => MutationQuery::update($mappedValues),
+            MutationType::DELETE => MutationQuery::delete($query->limit, $query->permanentDelete),
+            MutationType::INCREMENT => MutationQuery::increment($mappedColumn, $query->amount, $mappedValues),
+            MutationType::DECREMENT => MutationQuery::decrement($mappedColumn, $query->amount, $mappedValues),
+        };
+
+        return $this->dbStorage->mutate($mappedQuery, $conditionsColumns);
+    }
+
+    /**
+     * @param StreamQuery $query
+     * @param array $conditions
+     * @return \Generator
+     */
+    public function stream(StreamQuery $query, array $conditions = []): \Generator
+    {
+        $conditionsColumns = $this->dbMapper->mapConditionsColumnNames($conditions);
+        $mappedColumns = $query->columns === [] ? [] : $this->dbMapper->mapAttributesNamesToColumns($query->columns);
+        $mappedIdColumn = $query->idColumn !== null ? $this->dbMapper->mapAttributeNameToColumn($query->idColumn) : null;
+
+        $mappedQuery = match ($query->type) {
+            StreamType::CHUNK => StreamQuery::chunk($query->chunkSize, $mappedColumns),
+            StreamType::CHUNK_BY_ID => StreamQuery::chunkById($query->chunkSize, $mappedIdColumn, $mappedColumns),
+            StreamType::LAZY => StreamQuery::lazy($query->chunkSize, $mappedColumns),
+            StreamType::CURSOR => StreamQuery::cursor($mappedColumns),
+        };
+
+        return $this->dbStorage->stream($mappedQuery, $conditionsColumns);
+    }
+
+    protected function mapMutationValues(array $values): array
+    {
+        if ($values === []) {
+            return [];
+        }
+
+        return $this->dbMapper->mapAttributesToColumns($values);
     }
 
     /**

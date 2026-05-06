@@ -18,7 +18,6 @@ class StringUtils
             config('layerFrame.encryptSeed', '123$567a912Ab56n')));
     }
 
-
     /**
      * @param $string
      * @return bool

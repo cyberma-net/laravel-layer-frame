@@ -2,6 +2,12 @@
 
 namespace Cyberma\LayerFrame\Contracts\Repositories;
 
+use Cyberma\LayerFrame\DBStorage\Aggregates\ScalarQuery;
+use Cyberma\LayerFrame\DBStorage\Aggregates\AggregateType;
+use Cyberma\LayerFrame\DBStorage\Collections\CollectionQuery;
+use Cyberma\LayerFrame\DBStorage\Columns\ColumnQuery;
+use Cyberma\LayerFrame\DBStorage\Mutations\MutationQuery;
+use Cyberma\LayerFrame\DBStorage\Streams\StreamQuery;
 use Cyberma\LayerFrame\Exceptions\CodeException;
 use Cyberma\LayerFrame\Exceptions\Exception;
 use Cyberma\LayerFrame\Contracts\Models\IModel;
@@ -144,6 +150,67 @@ interface IRepository
     public function getCount(array $conditions = []): int;
 
     /**
+     * Generic scalar/aggregate operation in repository attribute space.
+     *
+     * @param array $conditions
+     * @param string|AggregateType $operation
+     * @param string|null $attribute
+     * @param array $options
+     * @return int|float|string|bool|null
+     */
+    public function getScalar(
+        array $conditions,
+        string|AggregateType $operation,
+        ?string $attribute = null,
+        array $options = []
+    ): int|float|string|bool|null;
+
+    /**
+     * Execute scalar/aggregate query against repository conditions.
+     *
+     * @param ScalarQuery $query
+     * @param array $conditions
+     * @return int|float|string|bool|null
+     */
+    public function scalar(ScalarQuery $query, array $conditions = []): int|float|string|bool|null;
+
+    /**
+     * Execute collection query (pluck-style retrieval) in repository attribute space.
+     *
+     * @param CollectionQuery $query
+     * @param array $conditions
+     * @return array
+     */
+    public function collection(CollectionQuery $query, array $conditions = []): array;
+
+    /**
+     * Execute column collection query (pluck-like retrieval) in repository attribute space.
+     *
+     * @param ColumnQuery $query
+     * @param array $conditions
+     * @return array
+     */
+    public function columnCollection(ColumnQuery $query, array $conditions = []): array;
+
+    /**
+     * Execute generic mutation in repository attribute space.
+     *
+     * @param MutationQuery $query
+     * @param array $conditions
+     * @return int
+     */
+    public function mutate(MutationQuery $query, array $conditions = []): int;
+
+    /**
+     * Execute low-memory stream query in repository attribute space.
+     *
+     * @param StreamQuery $query
+     * @param array $conditions
+     * @return \Generator
+     */
+    public function stream(StreamQuery $query, array $conditions = []): \Generator;
+
+    /**
      * @param array $conditions
      * @param array $attributes
      * @return array|null
@@ -156,7 +223,6 @@ interface IRepository
      * @return IModel|null
      */
     public function getFirst(array $conditions = [], array $attributes = []): ?IModel;
-
 
     /**
      * @param string $keywords
