@@ -3,7 +3,6 @@
  *
  * Class that can handle any type of content. Usually use as a data carrier for additional data
  */
-
 namespace Cyberma\LayerFrame\Utils;
 
 

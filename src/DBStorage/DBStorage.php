@@ -143,6 +143,12 @@ class DBStorage implements IDBStorage
             throw new \InvalidArgumentException(sprintf('Aggregate type "%s" does not support a target column.', $operation->value));
         }
 
+        // Short-circuit: an IN condition with an empty array guarantees zero matching rows.
+        // Return the operation identity immediately without issuing any DB query.
+        if ($this->hasEmptyInCondition($conditions)) {
+            return $this->identityValueForOperation($operation);
+        }
+
         // Build a dedicated query without SELECT payload and isolate mutable state.
         $baseQuery = $this->queryByConditions($conditions, [null]);
         $execQuery = clone $baseQuery;
@@ -153,6 +159,47 @@ class DBStorage implements IDBStorage
         }
 
         return $this->dispatchScalarOperation($execQuery, $operation, $column);
+    }
+
+    /**
+     * Returns true if any normalized condition is an IN operator with an empty array value.
+     * Used to short-circuit scalar execution without issuing a DB query.
+     */
+    protected function hasEmptyInCondition(array $conditions): bool
+    {
+        if ($conditions === []) {
+            return false;
+        }
+
+        $normalized = $this->normalizeConditions($conditions);
+        foreach ($normalized as [, $op, $val]) {
+            $resolvedOp = match (strtolower(trim((string)$op))) {
+                'notin', 'not_in' => 'not in',
+                default           => strtolower(trim((string)$op)),
+            };
+            if ($resolvedOp === 'in' && $val === []) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Returns the zero/identity value for each aggregate type when the result set is known to be empty.
+     * Matches real DB behaviour: COUNT → 0, EXISTS → false, SUM → 0, others → null.
+     */
+    protected function identityValueForOperation(AggregateType $operation): int|float|string|bool|null
+    {
+        return match ($operation) {
+            AggregateType::EXISTS         => false,
+            AggregateType::COUNT,
+            AggregateType::SUM            => 0,
+            AggregateType::AVG,
+            AggregateType::MIN,
+            AggregateType::MAX,
+            AggregateType::VALUE          => null,
+        };
     }
 
     /**
@@ -364,12 +411,17 @@ class DBStorage implements IDBStorage
      */
     public function normalizeSingleCondition(array $condition): array
     {
-        // ['column', 'value'] → turn into ['column', '=', 'value']
+        // ['column', value] short form
         if (count($condition) === 2) {
-            return [$condition[0], '=', $condition[1]];
+            [$column, $value] = $condition;
+            // Array value in short form → auto-detect as IN condition
+            if (is_array($value)) {
+                return [$column, 'in', $value];
+            }
+            return [$column, '=', $value];
         }
 
-        // assume correct: ['column', 'operator', 'value']
+        // Full form: ['column', 'operator', 'value']
         if (count($condition) === 3) {
             return $condition;
         }
@@ -424,11 +476,13 @@ class DBStorage implements IDBStorage
         $op = strtolower(trim($operator));
         // Normalize synonyms
         $op = match ($op) {
-            'notin' => 'not in',
-            'not_in' => 'not in',
-            'is null' => 'null',
-            'is not null' => 'not null',
-            default => $op,
+            'notin', 'not_in'          => 'not in',
+            'is null', 'is_null',
+            'isnull'                   => 'null',
+            'is not null', 'not_null',
+            'notnull'                  => 'not null',
+            '!='                       => '<>',
+            default                    => $op,
         };
 
         switch ($op) {
@@ -452,11 +506,19 @@ class DBStorage implements IDBStorage
                 if (!is_array($value)) {
                     throw new \InvalidArgumentException("IN operator requires array value.");
                 }
+                // Empty IN set → explicit false predicate; no rows can match an empty set.
+                if ($value === []) {
+                    return $query->whereRaw('0 = 1');
+                }
                 return $query->whereIn($column, $value);
 
             case 'not in':
                 if (!is_array($value)) {
                     throw new \InvalidArgumentException("NOT IN operator requires array value.");
+                }
+                // Empty NOT IN → no constraint: every row satisfies "not in empty set".
+                if ($value === []) {
+                    return $query;
                 }
                 return $query->whereNotIn($column, $value);
 
@@ -487,7 +549,7 @@ class DBStorage implements IDBStorage
                 return $query->where($column, $pure, $value);
 
 
-            /* DEFAULT SIMPLE OPERATOR (=, <, >, <=, >=, !=, etc.) */
+            /* DEFAULT SIMPLE OPERATOR (=, <, >, <=, >=, <>, etc.) */
             default:
                 return $query->where($column, $op, $value);
         }

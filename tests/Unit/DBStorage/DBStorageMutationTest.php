@@ -75,7 +75,7 @@ final class FakeMutationBuilder extends Builder
     public function __construct()
     {
         $connection = Mockery::mock(ConnectionInterface::class);
-        parent::__construct($connection, new Grammar(), new Processor());
+        parent::__construct($connection, Mockery::mock(Grammar::class), new Processor());
         $this->tracker = (object)['softDeleteTriggered' => false];
     }
 
